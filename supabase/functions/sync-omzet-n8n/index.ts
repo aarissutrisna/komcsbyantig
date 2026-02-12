@@ -12,6 +12,35 @@ interface N8NData {
   piutang: number;
 }
 
+function convertDateFormat(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString().split("T")[0];
+
+  const patterns = [
+    { regex: /^(\d{2})-(\d{2})-(\d{4})$/, format: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` },
+    { regex: /^(\d{2})\/(\d{2})\/(\d{4})$/, format: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` },
+    { regex: /^(\d{4})-(\d{2})-(\d{2})$/, format: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` },
+  ];
+
+  for (const { regex, format } of patterns) {
+    const match = dateStr.match(regex);
+    if (match) {
+      return format(match);
+    }
+  }
+
+  return dateStr;
+}
+
+function validateOmzetData(data: unknown): data is N8NData {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.tanggal === "string" &&
+    (typeof obj.cash === "number" || obj.cash === null) &&
+    (typeof obj.piutang === "number" || obj.piutang === null)
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -92,12 +121,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const n8nData = (await n8nResponse.json()) as N8NData[];
+    const rawData = await n8nResponse.json();
+    const n8nData = Array.isArray(rawData) ? rawData : [rawData];
 
-    // Upsert data into omzet table
-    const omzetData = n8nData.map((item) => ({
+    const validatedData = n8nData.filter(validateOmzetData);
+
+    if (validatedData.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No valid data received from N8N" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Transform & validate data into omzet table format
+    const omzetData = validatedData.map((item) => ({
       branch_id: branchId,
-      tanggal: item.tanggal,
+      tanggal: convertDateFormat(item.tanggal),
       cash: item.cash || 0,
       piutang: item.piutang || 0,
       total: (item.cash || 0) + (item.piutang || 0),

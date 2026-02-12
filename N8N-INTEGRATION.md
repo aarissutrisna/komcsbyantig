@@ -48,7 +48,27 @@ Di aplikasi KomCS:
 
 **Endpoint**: `POST /functions/v1/n8n-webhook`
 
-**Request Body**:
+**Request Body (Format Option 1: Array of Records)**:
+```json
+{
+  "branchId": "uuid-of-branch",
+  "data": [
+    {
+      "tanggal": "01-01-2026",
+      "cash": 35000000,
+      "piutang": 20000000
+    },
+    {
+      "tanggal": "02-01-2026",
+      "cash": 60000000,
+      "piutang": 10000000
+    }
+  ],
+  "token": "optional-webhook-secret"
+}
+```
+
+**Request Body (Format Option 2: Single Record)**:
 ```json
 {
   "branchId": "uuid-of-branch",
@@ -59,22 +79,49 @@ Di aplikasi KomCS:
 }
 ```
 
+**Date Format Support**:
+- `dd-mm-yyyy` (01-01-2026)
+- `dd/mm/yyyy` (01/01/2026)
+- `yyyy-mm-dd` (2026-01-01)
+
 **Response**:
 ```json
 {
   "success": true,
-  "message": "Omzet data received and commissions calculated",
-  "omzet": {
-    "branchId": "...",
-    "tanggal": "2024-01-15",
-    "cash": 5000000,
-    "piutang": 2000000,
-    "total": 7000000
-  },
-  "commissionResult": {
-    "success": true,
-    "commissions": [...]
-  }
+  "message": "Received and processed 2 omzet records",
+  "recordsProcessed": 2,
+  "omzetData": [
+    {
+      "branch_id": "...",
+      "tanggal": "2026-01-01",
+      "cash": 35000000,
+      "piutang": 20000000,
+      "total": 55000000
+    },
+    {
+      "branch_id": "...",
+      "tanggal": "2026-01-02",
+      "cash": 60000000,
+      "piutang": 10000000,
+      "total": 70000000
+    }
+  ],
+  "commissionResults": [
+    {
+      "tanggal": "2026-01-01",
+      "result": {
+        "success": true,
+        "commissions": [...]
+      }
+    },
+    {
+      "tanggal": "2026-01-02",
+      "result": {
+        "success": true,
+        "commissions": [...]
+      }
+    }
+  ]
 }
 ```
 
@@ -255,7 +302,7 @@ Trigger: Cron (daily at 11:00 PM)
     - Log success/error
 ```
 
-**N8N HTTP Node Config**:
+**N8N HTTP Node Config (Array Format - Recommended)**:
 
 ```
 Method: POST
@@ -264,9 +311,26 @@ URL: https://your-supabase-project.functions.supabase.co/functions/v1/n8n-webhoo
 Headers:
   Content-Type: application/json
 
-Body:
+Body (when returning array from POS):
 {
-  "branchId": "{{ $json.branch_id }}",
+  "branchId": "YOUR_BRANCH_ID",
+  "data": "{{ $json }}",
+  "token": "your-webhook-secret"
+}
+```
+
+**N8N HTTP Node Config (Single Record Format)**:
+
+```
+Method: POST
+URL: https://your-supabase-project.functions.supabase.co/functions/v1/n8n-webhook
+
+Headers:
+  Content-Type: application/json
+
+Body (when returning single record):
+{
+  "branchId": "YOUR_BRANCH_ID",
   "tanggal": "{{ $json.tanggal }}",
   "cash": {{ $json.cash }},
   "piutang": {{ $json.piutang }},
@@ -276,14 +340,36 @@ Body:
 
 ## Testing
 
-### 1. Test Webhook via cURL
+### 1. Test Webhook via cURL (Array Format)
 
 ```bash
 curl -X POST https://your-supabase.functions.supabase.co/functions/v1/n8n-webhook \
   -H "Content-Type: application/json" \
   -d '{
     "branchId": "YOUR_BRANCH_ID",
-    "tanggal": "2024-01-15",
+    "data": [
+      {
+        "tanggal": "01-01-2026",
+        "cash": 35000000,
+        "piutang": 20000000
+      },
+      {
+        "tanggal": "02-01-2026",
+        "cash": 60000000,
+        "piutang": 10000000
+      }
+    ]
+  }'
+```
+
+### Test Webhook via cURL (Single Record)
+
+```bash
+curl -X POST https://your-supabase.functions.supabase.co/functions/v1/n8n-webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branchId": "YOUR_BRANCH_ID",
+    "tanggal": "15-01-2026",
     "cash": 5000000,
     "piutang": 2000000
   }'
