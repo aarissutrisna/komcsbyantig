@@ -2,72 +2,61 @@
 
 Production-ready web application untuk sistem komisi Customer Service (CS) berbasis omzet harian.
 
-**Status**: ✅ Production Ready | Built with React 18, TypeScript, Node.js, Express, PostgreSQL
+**Status**: ✅ Production Ready (v1.0) | Built with React 18, TypeScript, Node.js, Express, PostgreSQL
+**Note**: Core commission system ready. N8N integration is in roadmap.
 
 ---
 
 ## 🏗️ Arsitektur
 
-### Technology Stack
+### Technology Stack (v1.0)
 | Component | Technology |
 |-----------|-----------|
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS |
 | **Backend** | Node.js + Express (REST API) |
-| **Database** | PostgreSQL (native driver pg) |
-| **Authentication** | JWT (jsonwebtoken) + bcrypt |
-| **Integration** | N8N (3 webhooks: UTM, JTJ, TSM) |
+| **Database** | PostgreSQL (8 tables with indexes) |
+| **Authentication** | JWT (7-day expiry) + bcrypt |
 | **Deployment** | Nginx + PM2 on VPS |
+| **Future** | N8N webhooks (roadmap) |
 
 **IMPORTANT**: Aplikasi ini TIDAK menggunakan Supabase, Firebase, atau backend-as-a-service lainnya.
 
-### System Architecture
+### System Architecture (v1.0)
 ```
-POS/ERP (3 Branches)
-├─ UTM Branch ──┐
-├─ JTJ Branch ──┤
-└─ TSM Branch ──┤
-                │
-                ▼
-         ┌──────────────────┐
-         │   N8N Workflow   │
-         │  (Middleware)    │
-         │                  │
-         │ ├─ Validate Key  │
-         │ ├─ Parse Mode    │
-         │ ├─ Batch Data    │
-         │ └─ Transform     │
-         └────────┬─────────┘
-                  │
-                  ▼
-      ┌───────────────────────────┐
-      │  Express Backend (API)    │
-      │                           │
-      │ ├─ POST /api/omzet/...   │
-      │ ├─ POST /api/commissions │
-      │ ├─ GET  /api/dashboard   │
-      │ └─ JWT Auth              │
-      └────────────┬──────────────┘
+┌─────────────────────────────────────────┐
+│  React Frontend (React 18 + TypeScript)  │
+│                                         │
+│  - Login page                           │
+│  - Dashboard (omzet, commissions)       │
+│  - Commission calculations              │
+│  - Withdrawal requests                  │
+│  - Audit trail                          │
+└────────────────┬────────────────────────┘
+                 │
+                 │ (HTTP + JWT)
+                 ▼
+      ┌──────────────────────────┐
+      │  Express Backend (Node.js)│
+      │                          │
+      │  - Auth service         │
+      │  - Omzet service        │
+      │  - Commission service   │
+      │  - Withdrawal service   │
+      └────────────┬─────────────┘
                    │
+                   │ (SQL Queries)
                    ▼
-      ┌───────────────────────────┐
-      │   PostgreSQL Database     │
-      │                           │
-      │ ├─ omzet (+ revisi)      │
-      │ ├─ commissions           │
-      │ ├─ users & branches      │
-      │ ├─ n8n_sync_log (audit)  │
-      │ └─ audit trails          │
-      └────────────┬──────────────┘
-                   │
-                   ▼
-      ┌───────────────────────────┐
-      │   React Frontend (UI)     │
-      │                           │
-      │ ├─ Dashboard             │
-      │ ├─ Commission Reports    │
-      │ ├─ Sync History          │
-      │ └─ User Management       │
-      └───────────────────────────┘
+      ┌──────────────────────────┐
+      │  PostgreSQL Database     │
+      │                          │
+      │  - users & branches      │
+      │  - omzet records         │
+      │  - commissions           │
+      │  - withdrawals           │
+      │  - audit trail           │
+      └──────────────────────────┘
+
+Future: N8N integration for automated data import
 ```
 
 ---
@@ -212,29 +201,28 @@ cs-commission-system/
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur Utama (v1.0)
 
-### For Admin
-- ✅ Complete dashboard dengan real-time statistics
-- ✅ CRUD branches (cabang)
-- ✅ CRUD users (CS, HRD, Admin)
-- ✅ View semua omzet dan commissions
-- ✅ Calculate commissions otomatis
-- ✅ Mark commissions as paid
-- ✅ Audit log (mutations tracking)
-- ✅ Reset user passwords
+### Core Features
+- ✅ **Authentication**: Login with JWT tokens (7 days expiry)
+- ✅ **Omzet Management**: Create, read, filter by date/branch/user
+- ✅ **Commission Calculation**: Auto-calculate with tiered rules
+- ✅ **Withdrawal Management**: Create requests, approve/reject
+- ✅ **Audit Trail**: Track all mutations in database
+- ✅ **Role-Based Access**: Admin, HRD, CS roles with permissions
 
-### For HRD
-- ✅ Manage users dan branches
-- ✅ Input dan edit omzet
-- ✅ Calculate dan manage commissions
-- ✅ View reports
+### User Roles
+- **Admin**: Calculate commissions, approve withdrawals, view all data
+- **HRD**: Input omzet, calculate commissions, view reports
+- **CS**: Input omzet, view own commissions
 
-### For CS (Customer Service)
-- ✅ Input daily sales (omzet)
-- ✅ View personal commissions
-- ✅ View personal dashboard
-- ✅ Change password
+### Database Features
+- ✅ PostgreSQL with 8 tables
+- ✅ Foreign key constraints
+- ✅ Automated indexes for performance
+- ✅ Commission config with tiered rules
+- ✅ Attendance tracking
+- ✅ Mutation logging
 
 ---
 
@@ -280,49 +268,32 @@ Rules dapat dimodifikasi di table `commission_config`.
 - `GET /api/auth/profile` - Get profile
 - `POST /api/auth/change-password` - Change password
 
-### Branches
-- `GET /api/branches` - List branches
-- `POST /api/branches` - Create branch
-- `PUT /api/branches/:id` - Update branch
-- `DELETE /api/branches/:id` - Delete branch
+### Authentication (3)
+- `POST /api/auth/login` - Login
+- `GET /api/auth/profile` - Get profile (JWT required)
+- `POST /api/auth/change-password` - Change password (JWT required)
 
-### Users
-- `GET /api/users` - List users
-- `POST /api/users` - Create user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
-- `POST /api/users/:id/reset-password` - Reset password
+### Omzet / Sales (5)
+- `POST /api/omzet/create` - Create omzet record (JWT required)
+- `GET /api/omzet/by-date?startDate=2024-01-01&endDate=2024-01-31` - Get by date range (JWT required)
+- `GET /api/omzet/by-branch?branchId=uuid` - Get by branch (JWT required)
+- `GET /api/omzet/by-user?userId=uuid` - Get by user (JWT required)
+- `GET /api/omzet/stats` - Get omzet statistics (JWT required)
 
-### Omzet (Sales)
-- `POST /api/omzet/create` - Create omzet record
-- `GET /api/omzet/by-date` - Get by date
-- `GET /api/omzet/by-branch` - Get by branch (+ date range)
-- `GET /api/omzet/by-user` - Get by user
-- `GET /api/omzet/stats` - Get statistics
+### Commissions (2)
+- `POST /api/commissions/calculate-by-date` - Calculate commissions by date (JWT required)
+- `POST /api/commissions/calculate-by-branch` - Calculate commissions by branch (JWT required)
 
-### N8N Integration
-- `POST /api/omzet/webhook/n8n` - Receive from N8N webhook (3 branches)
-  - Support modes: daily, update, bulk
-  - Auth: x-api-key header
-  - No JWT required (webhook authentication)
-- `POST /api/omzet/sync/n8n` - Manual sync via webapp
-  - Auth: JWT token required
-  - Query date range (startDate, endDate)
-  - Role: admin, hrd only
+### Withdrawals (4)
+- `POST /api/withdrawals/create` - Create withdrawal request (JWT required)
+- `POST /api/withdrawals/approve` - Approve/reject withdrawal (JWT required)
+- `GET /api/withdrawals/list` - List withdrawals (JWT required)
+- `GET /api/withdrawals/balance` - Get available balance (JWT required)
 
-### Commissions
-- `POST /api/commissions/calculate` - Calculate commissions
-- `GET /api/commissions/by-user` - Get by user
-- `GET /api/commissions/by-branch` - Get by branch
-- `POST /api/commissions/mark-paid` - Mark as paid
+### Health Check (1)
+- `GET /health` - Server health check (no auth required)
 
-### Dashboard
-- `GET /api/dashboard/stats` - Dashboard statistics
-- `GET /api/dashboard/mutations` - Audit log
-- `GET /api/dashboard/weekly-report` - Weekly report
-- `GET /api/dashboard/top-performers` - Top performers
-
-**Total**: 25+ endpoints
+**Total**: 16 endpoints (all secured with JWT except login & health)
 
 Lihat `API-EXAMPLES.md` untuk contoh lengkap dengan cURL.
 
@@ -366,14 +337,9 @@ npm run build
 # 5. Enable HTTPS
 sudo certbot --nginx -d your-domain.com
 
-# 6. Configure N8N webhooks
-# Update N8N workflow:
-# - Webhook URL: https://your-domain.com/api/omzet/webhook/n8n
-# - Headers: x-api-key: $env.N8N_WEBHOOK_SECRET
-# - Test with: curl -X POST https://your-domain.com/api/omzet/webhook/n8n ...
 ```
 
-**Lihat `SETUP.md` untuk panduan lengkap. Lihat `README-N8N-WORKFLOW.md` untuk N8N configuration.**
+**Lihat `SETUP.md` untuk panduan lengkap deployment.**
 
 ---
 
@@ -478,31 +444,6 @@ npm install
 npm run build
 ```
 
-### N8N Webhook Issues
-
-**Issue: "Invalid webhook token"**
-```bash
-# Check N8N_WEBHOOK_SECRET is set
-echo $N8N_WEBHOOK_SECRET
-
-# Verify x-api-key header in N8N workflow
-# Should match: N8N_WEBHOOK_SECRET in backend .env
-```
-
-**Issue: "Duplicate key value"**
-- Cause: Same (branch, date) already exists
-- Solution: Use mode="update" to revise data
-
-**Issue: "Timeout after 30s (bulk import)"**
-- Cause: Batch size too large
-- Solution: Reduce batch size in N8N from 500 → 100
-
-**Issue: "Branch not found"**
-- Cause: branch_id mismatch
-- Solution: Verify branch exists in webapp & matches N8N config
-
-**See README-N8N-WORKFLOW.md → Monitoring section for more**
-
 ---
 
 ## 📦 Dependencies
@@ -601,41 +542,53 @@ VITE_APP_TITLE=CS Commission System
 4. View reports → Dashboard & statistics
 5. Audit log → Track all changes
 
-### N8N Integration Workflow
-1. **POS/ERP System** → Sends sales data
-2. **N8N Webhook** → Receives data from 3 branches (UTM, JTJ, TSM)
-3. **N8N Processing**:
-   - Validate x-api-key header
-   - Determine mode (daily/update/bulk)
-   - Split large batches (500 records/batch)
-   - Transform date formats
-4. **PostgreSQL** → Insert/Upsert to omzet table
-5. **Auto-Trigger** → Calculate commissions
-6. **Webapp** → Display reports & analytics
+### N8N Integration Workflow (Future Roadmap)
+**Note**: N8N integration is documented in README-N8N-WORKFLOW.md as a design reference for future implementation. Current v1.0 focuses on manual omzet entry via web interface.
 
-**Modes**:
-- **daily** (default): Append new records only
-- **update**: Revise existing records with version tracking
-- **bulk**: Import historical data (1000+ records)
+Future workflow will include:
+1. **POS/ERP System** → Sends sales data to N8N
+2. **N8N Webhook** → Receives from 3 branches (UTM, JTJ, TSM)
+3. **N8N Processing** → Data validation and transformation
+4. **PostgreSQL** → Auto-insert with audit trail
+5. **Commission Auto-Trigger** → Calculate immediately
 
-**See README-N8N-WORKFLOW.md for complete integration guide**
+Requirements for N8N integration:
+- Add database fields: source_n8n, revisi, synced_at
+- Create n8n_sync_log audit table
+- Implement webhook handlers
 
 ---
 
-## ✅ Production Ready
+## ✅ Production Ready (v1.0)
 
-- ✅ 36 source files
-- ✅ 25+ API endpoints
-- ✅ 11 database tables
+### What's Implemented
+- ✅ 16 API endpoints (fully functional)
+- ✅ 8 database tables with indexes
+- ✅ JWT authentication & authorization
+- ✅ Commission calculation (tiered rules)
+- ✅ Omzet tracking (daily manual entry)
+- ✅ Withdrawal management
+- ✅ Audit trail logging
+- ✅ Role-based access control (admin, hrd, cs)
 - ✅ Complete documentation
-- ✅ Build verified (248 KB)
-- ✅ Security implemented
-- ✅ Role-based access control
+
+### What's Not Implemented (Roadmap)
+- N8N webhook integration (design doc available)
+- Branch & User management APIs
+- Dashboard analytics APIs
+
+### Build Status
+- Frontend: 358.91 KB (gzipped: 101.89 KB)
+- Backend: 16 endpoints, 4 services
+- Database: 8 tables ready
+- Tests: Manual testing via cURL available
 
 ---
 
 **Version**: 1.0.0
 **Status**: Production Ready ✅
+**Core Features**: Complete
+**N8N Integration**: Documented as roadmap
 **Last Updated**: 2024
 
-For complete setup instructions, see **CS-COMMISSION-SYSTEM-README.md**
+For setup instructions, see **QUICK-START.md** or **SETUP.md**
