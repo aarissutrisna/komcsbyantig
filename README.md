@@ -1,397 +1,459 @@
-# KomCS PJB - Sistem Komisi Customer Service
+# CS Commission System
 
-Aplikasi web production-ready untuk menghitung komisi Customer Service (CS) berbasis omzet harian per cabang dengan sistem multi-role dan Supabase PostgreSQL.
+Production-ready web application untuk sistem komisi Customer Service (CS) berbasis omzet harian.
 
-**Status**: ✅ Production Ready | Built with React 18, TypeScript, Vite, Supabase
-
----
-
-## 📋 Daftar Isi
-
-- [Fitur Utama](#fitur-utama)
-- [Tech Stack](#tech-stack)
-- [Quick Start](#quick-start)
-- [Database Setup](#database-setup)
-- [Role & Permissions](#role--permissions)
-- [Business Logic](#business-logic)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [Deployment](#deployment)
-- [Security](#security)
-- [Troubleshooting](#troubleshooting)
+**Status**: ✅ Production Ready | Built with React 18, TypeScript, Node.js, Express, PostgreSQL
 
 ---
 
-## 🎯 Fitur Utama
+## 🏗️ Arsitektur
 
-- ✅ **Perhitungan Komisi Otomatis** - Berdasarkan omzet dan faktor pengali
-- ✅ **Multi-Role Access Control** - Admin, HRD, dan CS dengan permission berbeda
-- ✅ **Manajemen Kehadiran** - Tracking kehadiran CS harian
-- ✅ **Dashboard Real-time** - Statistik omzet dan komisi per cabang
-- ✅ **Sistem Mutasi** - Pencatatan dan tracking mutasi komisi
-- ✅ **Row Level Security** - Data terlindungi per role dan cabang
-- ✅ **Responsive UI** - Mobile-friendly design dengan Tailwind CSS
+| Component | Technology |
+|-----------|-----------|
+| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS |
+| **Backend** | Node.js + Express (REST API) |
+| **Database** | PostgreSQL (native driver pg) |
+| **Authentication** | JWT (jsonwebtoken) + bcrypt |
+| **Deployment** | Nginx + PM2 on VPS |
 
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 18 + TypeScript + Vite |
-| **Styling** | Tailwind CSS + PostCSS |
-| **Icons** | Lucide React |
-| **Routing** | React Router v7 |
-| **Backend** | Supabase (PostgreSQL + Auth + RLS) |
-| **Build Size** | 101.89 kB gzip (production) |
+**IMPORTANT**: Aplikasi ini TIDAK menggunakan Supabase, Firebase, atau backend-as-a-service lainnya.
 
 ---
 
-## 🚀 Quick Start
+## 📚 Dokumentasi Lengkap
 
-### 1. Clone & Install
+Untuk setup dan deployment lengkap, baca dokumentasi berikut:
 
+### 1. **CS-COMMISSION-SYSTEM-README.md** - Main Documentation
+   - Arsitektur lengkap
+   - Quick start guide (5 menit)
+   - API endpoints (25+)
+   - Security features
+   - Workflow
+   - Troubleshooting
+
+### 2. **DEPLOYMENT-GUIDE.md** - Production Deployment
+   - Step-by-step setup VPS
+   - PostgreSQL configuration
+   - Nginx + PM2 setup
+   - SSL/HTTPS dengan Certbot
+   - Backup strategies
+   - Monitoring
+
+### 3. **API-EXAMPLES.md** - API Testing
+   - 50+ cURL examples
+   - All endpoints documented
+   - Postman collection guide
+   - Response formats
+
+### 4. **PROJECT-SUMMARY.md** - Project Overview
+   - Complete file list
+   - Features summary
+   - Build status
+   - Technology stack
+
+---
+
+## ⚡ Quick Start (Development)
+
+### Prerequisites
+- Node.js 16+
+- PostgreSQL 12+
+- npm atau yarn
+
+### 1. Setup Database
 ```bash
-git clone <repository-url>
-cd project
-npm install
+# Create database
+createdb cs_commission
+
+# Load schema
+psql -d cs_commission -f schema.sql
 ```
 
-### 2. Configure Environment
-
+### 2. Setup Backend
 ```bash
+cd server
+
+# Copy environment file
 cp .env.example .env
-# Edit .env dengan Supabase credentials Anda
-```
 
-Dapatkan values dari [Supabase Dashboard](https://app.supabase.com):
-- Settings → API → Project URL = `VITE_SUPABASE_URL`
-- Settings → API → Anon Key = `VITE_SUPABASE_ANON_KEY`
+# Edit .env dengan kredensial PostgreSQL Anda:
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=cs_commission
+# DB_USER=postgres
+# DB_PASSWORD=your_password
 
-### 3. Create First Admin Account
+# Install dependencies
+npm install
 
-⚠️ **WAJIB**: Tidak ada default admin account!
+# Seed database dengan default data
+npm run seed
 
-```bash
-# 1. Buka Supabase Dashboard → Authentication → Users
-# 2. Click "Add User" → Create New User
-#    - Email: admin@komcs.com
-#    - Password: Admin123!
-#    - Auto Confirm: ✓
-# 3. Copy UUID dari user yang baru dibuat
-
-# 4. Jalankan SQL di Supabase SQL Editor:
-INSERT INTO users (id, username, nama, role)
-VALUES ('PASTE_UUID_DISINI', 'admin', 'Administrator', 'admin');
-
-# 5. Login dengan admin@komcs.com / Admin123!
-```
-
-Baca `SETUP.md` untuk panduan lengkap.
-
-### 4. Development Server
-
-```bash
-npm run dev
-# Akses: http://localhost:5173
-```
-
-### 5. Production Build
-
-```bash
-npm run build
-npm run preview
-```
-
-Build output ada di `dist/` folder → ready untuk deployment!
-
----
-
-## 📊 Database Setup
-
-Tabel-tabel utama yang sudah dibuat:
-
-| Tabel | Deskripsi |
-|-------|-----------|
-| `branches` | Data cabang/toko |
-| `users` | Profile pengguna (linked to auth.users) |
-| `attendance_data` | Kehadiran dan omzet harian |
-| `mutations` | Mutasi komisi antar cabang |
-
-**Fitur Security:**
-- ✅ RLS enabled di semua tabel
-- ✅ Role-based policies
-- ✅ Auto timestamp update
-- ✅ Auto komisi calculation
-
-Lihat `supabase/migrations/` untuk skema lengkap.
-
----
-
-## 👥 Role & Permissions
-
-### Admin
-| Feature | Access |
-|---------|--------|
-| View Dashboard | ✅ All data |
-| Manage Cabang | ✅ Full |
-| Manage Users | ✅ Full |
-| Manage Attendance | ✅ Full |
-| Manage Mutations | ✅ Full |
-
-### HRD
-| Feature | Access |
-|---------|--------|
-| View Dashboard | ✅ Own branch only |
-| Manage Users | ✅ Own branch |
-| Manage Attendance | ✅ Own branch |
-| View Mutations | ✅ Own branch |
-
-### CS
-| Feature | Access |
-|---------|--------|
-| View Dashboard | ✅ Own data |
-| Input Attendance | ✅ Own records |
-| View Mutations | ✅ Own records |
-
----
-
-## 💰 Business Logic
-
-### Perhitungan Komisi
-
-**Formula:**
-```
-Komisi Global = Omzet × Persentase
-- Jika Omzet >= Target Max → 0.4%
-- Jika Omzet >= Target Min → 0.2%
-- Jika Omzet < Target Min → 0%
-
-Komisi CS = Komisi Global × Faktor Pengali
-```
-
-**Contoh:**
-- Omzet: Rp 150 juta
-- Target Min: Rp 50 juta
-- Target Max: Rp 100 juta
-- Komisi Global = 150 juta × 0.4% = Rp 600 ribu
-
-**Distribusi ke CS:**
-- CS dengan faktor 0.75: Rp 600K × 0.75 = Rp 450K
-- CS dengan faktor 0.50: Rp 600K × 0.50 = Rp 300K
-- CS dengan faktor 0.25: Rp 600K × 0.25 = Rp 150K
-
----
-
-## 📁 Project Structure
-
-```
-project/
-├── src/
-│   ├── components/           # Reusable components
-│   │   ├── Layout.tsx        # Main layout with sidebar
-│   │   └── ProtectedRoute.tsx # Route guard
-│   ├── contexts/
-│   │   └── AuthContext.tsx   # Auth state management
-│   ├── lib/
-│   │   └── supabase.ts       # Supabase client config
-│   ├── pages/                # Page components
-│   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── DataAttendance.tsx
-│   │   ├── Mutations.tsx
-│   │   ├── Branches.tsx
-│   │   ├── Users.tsx
-│   │   └── Settings.tsx
-│   ├── utils/
-│   │   └── currency.ts       # Currency formatting
-│   ├── App.tsx               # Main app with routes
-│   ├── index.css             # Global styles
-│   └── main.tsx              # Entry point
-├── supabase/
-│   └── migrations/           # Database migrations
-├── dist/                     # Production build (generated)
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── tailwind.config.js
-└── .env                      # ⚠️ Don't commit this!
-```
-
----
-
-## 🔨 Development
-
-### Available Scripts
-
-```bash
 # Start development server
 npm run dev
+```
 
-# Build for production
+Backend akan berjalan di `http://localhost:3000`
+
+### 3. Setup Frontend
+```bash
+cd frontend
+
+# Copy environment file
+cp .env.example .env
+
+# Edit .env (biasanya default sudah OK):
+# VITE_API_BASE_URL=http://localhost:3000/api
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Frontend akan berjalan di `http://localhost:5173`
+
+### 4. Login
+```
+Email: admin@commission.local
+Password: admin123456
+```
+
+---
+
+## 📂 Project Structure
+
+```
+cs-commission-system/
+├── schema.sql                    # PostgreSQL schema
+├── server/                       # Backend API (Node.js + Express)
+│   ├── package.json
+│   ├── .env.example
+│   └── src/
+│       ├── server.js             # Express server
+│       ├── config/database.js    # PostgreSQL connection
+│       ├── middleware/auth.js    # JWT auth
+│       ├── services/             # Business logic (5 files)
+│       ├── controllers/          # Route handlers (6 files)
+│       └── routes/               # API routes (6 files)
+│
+└── frontend/                     # React TypeScript app
+    ├── package.json
+    ├── .env.example
+    ├── vite.config.ts
+    └── src/
+        ├── App.tsx
+        ├── services/api.ts       # API client (Fetch)
+        ├── contexts/             # Auth context
+        ├── components/           # Reusable components
+        └── pages/                # 8 pages
+```
+
+---
+
+## ✨ Fitur Utama
+
+### For Admin
+- ✅ Complete dashboard dengan real-time statistics
+- ✅ CRUD branches (cabang)
+- ✅ CRUD users (CS, HRD, Admin)
+- ✅ View semua omzet dan commissions
+- ✅ Calculate commissions otomatis
+- ✅ Mark commissions as paid
+- ✅ Audit log (mutations tracking)
+- ✅ Reset user passwords
+
+### For HRD
+- ✅ Manage users dan branches
+- ✅ Input dan edit omzet
+- ✅ Calculate dan manage commissions
+- ✅ View reports
+
+### For CS (Customer Service)
+- ✅ Input daily sales (omzet)
+- ✅ View personal commissions
+- ✅ View personal dashboard
+- ✅ Change password
+
+---
+
+## 🔐 Security Features
+
+- ✅ **JWT Authentication** - 7 days token expiry
+- ✅ **Password Hashing** - bcrypt (10 rounds)
+- ✅ **Role-Based Access Control** - admin, hrd, cs
+- ✅ **SQL Injection Prevention** - Parameterized queries
+- ✅ **Audit Trail** - mutations table tracks all changes
+- ✅ **CORS Configuration** - Environment-based
+- ✅ **Foreign Key Constraints** - Data integrity
+
+---
+
+## 📊 Commission Calculation
+
+Sistem otomatis menghitung komisi berdasarkan tiered rules:
+
+| Range Omzet | Commission % |
+|-------------|--------------|
+| 0 - 5M      | 2.5%         |
+| 5M - 10M    | 3.5%         |
+| 10M+        | 5.0%         |
+
+Rules dapat dimodifikasi di table `commission_config`.
+
+---
+
+## 📡 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - Login
+- `POST /api/auth/register` - Register
+- `GET /api/auth/profile` - Get profile
+- `POST /api/auth/change-password` - Change password
+
+### Branches
+- `GET /api/branches` - List branches
+- `POST /api/branches` - Create branch
+- `PUT /api/branches/:id` - Update branch
+- `DELETE /api/branches/:id` - Delete branch
+
+### Users
+- `GET /api/users` - List users
+- `POST /api/users` - Create user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+- `POST /api/users/:id/reset-password` - Reset password
+
+### Omzet (Sales)
+- `POST /api/omzet` - Create omzet record
+- `GET /api/omzet/by-date` - Get by date
+- `GET /api/omzet/by-branch` - Get by branch
+- `GET /api/omzet/stats` - Get statistics
+
+### Commissions
+- `POST /api/commissions/calculate` - Calculate commissions
+- `GET /api/commissions/by-user` - Get by user
+- `GET /api/commissions/by-branch` - Get by branch
+- `POST /api/commissions/mark-paid` - Mark as paid
+
+### Dashboard
+- `GET /api/dashboard/stats` - Dashboard statistics
+- `GET /api/dashboard/mutations` - Audit log
+- `GET /api/dashboard/weekly-report` - Weekly report
+- `GET /api/dashboard/top-performers` - Top performers
+
+**Total**: 25+ endpoints
+
+Lihat `API-EXAMPLES.md` untuk contoh lengkap dengan cURL.
+
+---
+
+## 🚀 Production Deployment
+
+### VPS Requirements
+- Ubuntu 20.04+
+- Node.js 16+
+- PostgreSQL 12+
+- Nginx
+- PM2
+- 2GB RAM minimum
+
+### Quick Deployment
+```bash
+# 1. Setup database di VPS
+sudo -u postgres createdb cs_commission
+sudo -u postgres psql -d cs_commission -f schema.sql
+
+# 2. Deploy backend
+cd server
+cp .env.example .env
+# Edit .env dengan production credentials
+npm install --production
+npm run seed
+pm2 start src/server.js --name "cs-commission-api"
+pm2 save
+pm2 startup
+
+# 3. Deploy frontend
+cd ../frontend
+npm install
 npm run build
+# Copy dist/ ke /var/www/cs-commission
 
-# Preview production build locally
-npm run preview
+# 4. Configure Nginx
+# Setup reverse proxy: frontend → dist/, API → localhost:3000
 
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
+# 5. Enable HTTPS
+sudo certbot --nginx -d your-domain.com
 ```
 
-### Code Quality
-
-- ✅ TypeScript for type safety
-- ✅ ESLint for code consistency
-- ✅ Tailwind CSS for styling
-- ✅ React hooks best practices
-- ✅ Component-based architecture
+**Lihat `DEPLOYMENT-GUIDE.md` untuk panduan lengkap.**
 
 ---
 
-## 🚀 Deployment
+## 🧪 Testing
 
-### Quick Deploy to Popular Platforms
-
-**Vercel (Recommended)**
+### Run Backend Tests
 ```bash
-npm i -g vercel
-vercel
+cd server
+npm start
+# Test endpoint
+curl http://localhost:3000/health
 ```
 
-**Netlify**
+### Build Frontend
 ```bash
-npm i -g netlify-cli
-netlify deploy --prod --dir=dist
+cd frontend
+npm run build
+# Output: dist/ folder (248 KB gzipped)
 ```
 
-**Traditional VPS/Nginx**
+### API Testing
+```bash
+# Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@commission.local","password":"admin123456"}'
 
-See `DEPLOYMENT.md` for detailed instructions for:
-- HestiaCP + Nginx setup
-- Wireguard VPN configuration
-- Cloudflare SSL setup
-- Environment variables
-- Monitoring & logs
-
-**Build Requirements:**
-- Node.js 16+ (LTS recommended)
-- npm 7+
-- Disk space: ~500MB for node_modules + build
-
-**Output Size:**
-- `dist/index.html`: 0.71 kB
-- CSS (gzipped): 3.58 kB
-- JS (gzipped): 101.89 kB
-- **Total: ~120 kB gzipped** ✅ Very lightweight!
-
----
-
-## 🔐 Security
-
-### Built-in Security Features
-
-- ✅ **RLS Policies** - Row Level Security pada semua tabel
-- ✅ **JWT Auth** - Secure token-based authentication
-- ✅ **Password Hashing** - bcrypt via Supabase
-- ✅ **CORS Configuration** - Supabase CORS enabled
-- ✅ **Role-based Access** - Fine-grained permissions
-- ✅ **No Secrets in Code** - All credentials in .env
-- ✅ **XSS Protection** - React sanitization
-- ✅ **CSRF Protection** - HTTPS + SameSite cookies
-
-### Best Practices
-
-1. **Never commit `.env`** - Already in `.gitignore`
-2. **Use environment variables** - All secrets in `.env`
-3. **Keep dependencies updated** - `npm audit && npm update`
-4. **Review RLS policies** - Ensure access control is correct
-5. **Use HTTPS in production** - Always! (Cloudflare recommended)
-
----
-
-## 🆘 Troubleshooting
-
-### "Row Level Security policy violation"
-
-**Cause**: User ada di `auth.users` tapi belum di tabel `users`
-
-**Fix**:
-```sql
--- Check if user exists in users table
-SELECT * FROM users WHERE id = 'user-id-here';
-
--- If not exists, insert:
-INSERT INTO users (id, username, nama, role)
-VALUES ('user-id', 'username', 'Full Name', 'admin');
+# Get branches (with token)
+curl -X GET http://localhost:3000/api/branches \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-### "Cannot connect to Supabase"
+---
 
-**Fix**:
-1. Verify `.env` file exists
-2. Check `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-3. Restart dev server: `npm run dev`
+## 🐛 Troubleshooting
 
-### "Blank page in production"
+### Database Connection Error
+```bash
+# Check PostgreSQL running
+sudo systemctl status postgresql
 
-**Fix**:
-1. Check browser console for errors (F12)
-2. Verify build: `npm run build && npm run preview`
-3. Check `dist/index.html` exists
-4. Verify web server is serving `dist/` folder
-5. For SPA: configure web server to serve `index.html` for all routes
+# Test connection
+psql -U postgres -h localhost -d cs_commission
+```
 
-### "Login not working"
+### Backend Not Starting
+```bash
+# Check logs
+pm2 logs cs-commission-api
 
-**Checklist**:
-- [ ] User exists in `auth.users`
-- [ ] User exists in `users` table
-- [ ] User IDs match between both tables
-- [ ] Role is valid: 'admin', 'hrd', or 'cs'
+# Check port 3000
+sudo lsof -i :3000
+```
+
+### Frontend Build Error
+```bash
+# Clear and reinstall
+rm -rf node_modules
+npm install
+npm run build
+```
 
 ---
 
-## 📚 Documentation
+## 📦 Dependencies
 
-### Setup & Deployment
-- **SETUP.md** - Quick start guide untuk development
-- **SETUP-SELF-HOSTED.md** - Setup Supabase self-hosted di VPS
-- **DEPLOYMENT.md** - Deployment ke production (VPS, Cloud, dll)
-- **PRODUCTION-SETUP.md** - Production checklist & verification
+### Backend (6 main packages)
+- express - Web framework
+- pg - PostgreSQL driver
+- jsonwebtoken - JWT authentication
+- bcrypt - Password hashing
+- cors - CORS middleware
+- dotenv - Environment variables
 
-### Backend & Integration
-- **BACKEND-SETUP.md** - Edge Functions & serverless backend
-- **N8N-INTEGRATION.md** - N8N webhook integration untuk auto-sync omzet
-- **COMPLETE-SETUP.md** - Complete system overview & architecture
-
-### External Links
-- **Supabase Docs**: https://supabase.com/docs
-- **React Docs**: https://react.dev
-- **Vite Docs**: https://vitejs.dev
-- **Tailwind Docs**: https://tailwindcss.com/docs
-- **N8N Docs**: https://docs.n8n.io
+### Frontend (4 main packages)
+- react - UI library
+- react-router-dom - Routing
+- typescript - Type safety
+- lucide-react - Icons
 
 ---
 
-## 📄 License
+## 📝 Environment Variables
 
-Private - Internal Use Only
+### Backend (.env)
+```env
+NODE_ENV=development
+PORT=3000
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=cs_commission
+DB_USER=postgres
+DB_PASSWORD=your_password
+JWT_SECRET=your_secret_min_32_chars
+JWT_EXPIRY=7d
+CORS_ORIGIN=http://localhost:5173
+```
+
+### Frontend (.env)
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
+VITE_APP_TITLE=CS Commission System
+```
 
 ---
 
-## 📝 Changelog
+## 📖 Additional Resources
 
-### v0.0.0 (Initial Release)
-- ✅ Initial schema with 4 main tables
-- ✅ Multi-role authentication (Admin, HRD, CS)
-- ✅ RLS policies for data security
-- ✅ Responsive dashboard with React + Tailwind
-- ✅ Real-time komisi calculation
-- ✅ Complete deployment documentation
+- **CS-COMMISSION-SYSTEM-README.md** - Complete documentation
+- **DEPLOYMENT-GUIDE.md** - VPS deployment guide
+- **API-EXAMPLES.md** - API testing examples
+- **PROJECT-SUMMARY.md** - Project overview
+- **schema.sql** - Database schema
 
 ---
 
-**Last Updated**: February 2026 | **Node.js**: 16+ | **Package Manager**: npm 7+
+## 💡 Development Tips
+
+1. **Database Changes**: Update `schema.sql` dan re-run
+2. **API Changes**: Update controllers/services
+3. **Frontend Changes**: Component-based architecture
+4. **Testing**: Use Postman atau cURL untuk API testing
+5. **Debugging**: Check PM2 logs dan PostgreSQL logs
+
+---
+
+## 🎯 Tech Stack Summary
+
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Backend**: Node.js + Express + PostgreSQL
+- **Auth**: JWT + bcrypt
+- **Deployment**: Nginx + PM2
+- **Database**: PostgreSQL 12+
+- **Build Tool**: Vite
+- **Process Manager**: PM2
+
+**NO Supabase, NO Firebase, NO BaaS**
+
+---
+
+## 🔄 Workflow
+
+1. CS input daily sales → Omzet table
+2. Admin calculate commissions → Commissions table
+3. Admin mark as paid → Update status
+4. View reports → Dashboard & statistics
+5. Audit log → Track all changes
+
+---
+
+## ✅ Production Ready
+
+- ✅ 36 source files
+- ✅ 25+ API endpoints
+- ✅ 11 database tables
+- ✅ Complete documentation
+- ✅ Build verified (248 KB)
+- ✅ Security implemented
+- ✅ Role-based access control
+
+---
+
+**Version**: 1.0.0
+**Status**: Production Ready ✅
+**Last Updated**: 2024
+
+For complete setup instructions, see **CS-COMMISSION-SYSTEM-README.md**
