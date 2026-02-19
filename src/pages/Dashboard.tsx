@@ -3,6 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { TrendingUp, Users, DollarSign, Calendar } from 'lucide-react';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { StatCard } from '../components/ui/StatCard';
+import { PageHeader } from '../components/ui/PageHeader';
 
 interface Stats {
   todayOmzet: number;
@@ -41,82 +44,79 @@ export function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Selamat datang, {user?.nama}</p>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Dashboard"
+        subtitle={`Selamat datang, ${user?.nama}`}
+      />
+
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8"
+        role="region"
+        aria-label="Ringkasan statistik"
+      >
+        <StatCard
+          icon={TrendingUp}
+          iconBgClass="bg-blue-50 dark:bg-blue-900/20"
+          iconColorClass="text-blue-600 dark:text-blue-400"
+          label="Omzet Hari Ini"
+          value={formatCurrency(stats.todayOmzet)}
+          staggerClass="stagger-1"
+        />
+        <StatCard
+          icon={DollarSign}
+          iconBgClass="bg-green-50 dark:bg-green-900/20"
+          iconColorClass="text-green-600 dark:text-green-400"
+          label="Komisi Hari Ini"
+          value={formatCurrency(stats.todayCommission)}
+          staggerClass="stagger-2"
+        />
+        <StatCard
+          icon={Calendar}
+          iconBgClass="bg-yellow-50 dark:bg-yellow-900/20"
+          iconColorClass="text-yellow-600 dark:text-yellow-400"
+          label="Omzet Bulan Ini"
+          value={formatCurrency(stats.monthlyOmzet)}
+          staggerClass="stagger-3"
+        />
+        <StatCard
+          icon={Users}
+          iconBgClass="bg-red-50 dark:bg-red-900/20"
+          iconColorClass="text-red-600 dark:text-red-400"
+          label="Total Komisi"
+          value={formatCurrency(stats.totalCommission)}
+          staggerClass="stagger-4"
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm animate-fade-in-up stagger-4">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Informasi Sistem</h2>
+        <dl className="space-y-3">
+          <div className="flex gap-2">
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Username:</dt>
+            <dd className="text-sm font-semibold text-gray-900 dark:text-white">{user?.username}</dd>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Omzet Hari Ini</h3>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayOmzet)}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
+          <div className="flex gap-2">
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Nama:</dt>
+            <dd className="text-sm font-semibold text-gray-900 dark:text-white">{user?.nama}</dd>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Komisi Hari Ini</h3>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayCommission)}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-yellow-50 rounded-lg">
-              <Calendar className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Omzet Bulan Ini</h3>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.monthlyOmzet)}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-2 bg-red-50 rounded-lg">
-              <Users className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Total Komisi</h3>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalCommission)}</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Informasi Sistem</h2>
-        <div className="space-y-3">
-          <div>
-            <span className="text-sm font-medium text-gray-600">Username: </span>
-            <span className="text-sm font-semibold text-gray-900">{user?.username}</span>
-          </div>
-          <div>
-            <span className="text-sm font-medium text-gray-600">Nama: </span>
-            <span className="text-sm font-semibold text-gray-900">{user?.nama}</span>
-          </div>
-          <div>
-            <span className="text-sm font-medium text-gray-600">Role: </span>
-            <span className="text-sm font-semibold text-gray-900 uppercase">{user?.role}</span>
+          <div className="flex gap-2">
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Role:</dt>
+            <dd className="text-sm font-semibold text-gray-900 dark:text-white uppercase">{user?.role}</dd>
           </div>
           {user?.faktor_pengali && (
-            <div>
-              <span className="text-sm font-medium text-gray-600">Faktor Pengali: </span>
-              <span className="text-sm font-semibold text-gray-900">{user.faktor_pengali}</span>
+            <div className="flex gap-2">
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Faktor Pengali:</dt>
+              <dd className="text-sm font-semibold text-gray-900 dark:text-white">{user.faktor_pengali}</dd>
             </div>
           )}
-        </div>
+        </dl>
       </div>
     </div>
   );

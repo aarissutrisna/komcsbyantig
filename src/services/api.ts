@@ -1,6 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
@@ -23,23 +24,23 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) => 
+  get: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: 'GET' }),
-  
-  post: <T>(endpoint: string, body: any, options?: RequestInit) => 
-    request<T>(endpoint, { 
-      ...options, 
-      method: 'POST', 
-      body: JSON.stringify(body) 
+
+  post: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(body)
     }),
-  
-  put: <T>(endpoint: string, body: any, options?: RequestInit) => 
-    request<T>(endpoint, { 
-      ...options, 
-      method: 'PUT', 
-      body: JSON.stringify(body) 
+
+  put: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: JSON.stringify(body)
     }),
-  
-  delete: <T>(endpoint: string, options?: RequestInit) => 
+
+  delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: 'DELETE' }),
 };

@@ -1,3 +1,149 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+
+  /* Smooth theme transitions on the root element */
+  html {
+    @apply scroll-smooth;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Safe area support for notched devices (iPhone X+) */
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Ensure all focusable elements have a visible focus ring for a11y */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-950;
+  }
+}
+
+@layer utilities {
+
+  /* Page entrance animation */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out both;
+  }
+
+  /* Staggered children entrance (for card grids) */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+
+  .stagger-2 {
+    animation-delay: 0.1s;
+  }
+
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+
+  .stagger-4 {
+    animation-delay: 0.2s;
+  }
+
+  /* Error shake animation */
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+
+  /* Slide down for mobile menus */
+  .animate-slide-down {
+    animation: slideDown 0.2s ease-out both;
+  }
+
+  /* Theme toggle icon rotation */
+  .animate-spin-once {
+    animation: spinOnce 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    20% {
+      transform: translateX(-6px);
+    }
+
+    40% {
+      transform: translateX(6px);
+    }
+
+    60% {
+      transform: translateX(-4px);
+    }
+
+    80% {
+      transform: translateX(4px);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes spinOnce {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+/* Respect user's motion preferences (WCAG 2.1 – 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
