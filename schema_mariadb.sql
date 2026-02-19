@@ -129,6 +129,6 @@ INSERT INTO commission_config (id, min_omzet, max_omzet, percentage) VALUES
   (UUID(), 10000000, NULL, 5.0);
 
 INSERT INTO branches (id, name, city) VALUES
-  (UUID(), 'Jakarta', 'Jakarta'),
-  (UUID(), 'Surabaya', 'Surabaya'),
-  (UUID(), 'Bandung', 'Bandung');
+  (UUID(), 'UTM', 'Puncak Jaya Baja UTM'),
+  (UUID(), 'JTJ', 'Puncak Jaya Baja JTJ'),
+  (UUID(), 'TSM', 'Puncak Jaya Baja TSM');
