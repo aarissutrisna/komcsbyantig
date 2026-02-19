@@ -6,7 +6,7 @@ async function seed() {
   try {
     console.log('Seeding database...');
 
-    const adminPassword = await bcrypt.hash('admin123456', 10);
+    const adminPassword = await bcrypt.hash('admin123', 10);
     const csPassword = await bcrypt.hash('cs123456', 10);
 
     const [branchRows] = await pool.execute(
@@ -26,7 +26,7 @@ async function seed() {
 
     await pool.execute(
       'INSERT IGNORE INTO users (id, email, password, role, branch_id) VALUES (?, ?, ?, ?, ?)',
-      [uuidv4(), 'admin@commission.local', adminPassword, 'admin', branchId]
+      [uuidv4(), 'admin@gmail.com', adminPassword, 'admin', branchId]
     );
 
     await pool.execute(
@@ -42,8 +42,8 @@ async function seed() {
     console.log('Database seeded successfully!');
     console.log('');
     console.log('Test accounts:');
-    console.log('- Email: admin@commission.local | Password: admin123456 | Role: admin');
-    console.log('- Email: hrd@commission.local | Password: admin123456 | Role: hrd');
+    console.log('- Email: admin@gmail.com | Password: admin123 | Role: admin');
+    console.log('- Email: hrd@gmail.com | Password: admin123 | Role: hrd');
     console.log('- Email: cs1@commission.local | Password: cs123456 | Role: cs');
 
     process.exit(0);

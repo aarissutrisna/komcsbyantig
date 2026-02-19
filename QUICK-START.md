@@ -58,7 +58,7 @@ npm run dev
 
 1. Buka http://localhost:5173
 2. Login dengan:
-   - Email: `admin@commission.local`
-   - Password: `admin123456`
+   - Email: `admin@gmail.com`
+   - Password: `admin123`
 
 ## Done!🚀

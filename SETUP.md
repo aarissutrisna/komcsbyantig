@@ -227,7 +227,7 @@ curl http://localhost:3000/health
 ```bash
 curl -X POST https://your-domain.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@commission.local","password":"admin123456"}'
+  -d '{"email":"admin@gmail.com","password":"admin123"}'
 ```
 
 ### 7.3 Test Frontend
@@ -379,4 +379,4 @@ sudo certbot renew -v
 
 **Production URL**: https://your-domain.com
 **API URL**: https://your-domain.com/api
-**Admin Login**: admin@commission.local / admin123456
+**Admin Login**: admin@gmail.com / admin123

@@ -2,7 +2,7 @@
 
 Production-ready web application untuk sistem komisi Customer Service (CS) berbasis omzet harian.
 
-**Status**: ✅ Production Ready (v1.1) | Built with React 18, TypeScript, Node.js, Express, MariaDB 11.4
+**Status**: ✅ Production Ready (v1.2.1) | Built with React 18, TypeScript, Node.js, Express, MariaDB 11.4
 **Environment**: Optimized for HestiaCP, ARM vCPU, Tunneling WireGuard.
 
 ---
@@ -61,8 +61,8 @@ npm run dev   # Jalankan frontend (Port 5173)
 ```
 
 ### 4. Login
-- **Email**: `admin@commission.local`
-- **Password**: `admin123456`
+- **Email**: `admin@gmail.com`
+- **Password**: `admin123`
 
 ---
 

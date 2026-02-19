@@ -7,7 +7,7 @@ Contoh request cURL untuk backend CS Commission (MariaDB).
 # Login
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@commission.local","password":"admin123456"}'
+  -d '{"email":"admin@gmail.com","password":"admin123"}'
 
 # Get Profile (Auth Required)
 curl -X GET http://localhost:3000/api/auth/profile \
