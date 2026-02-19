@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { PageHeader } from '../components/ui/PageHeader';
