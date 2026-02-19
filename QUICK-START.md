@@ -4,23 +4,18 @@ Setup lokal untuk development.
 
 ## Prerequisites
 
-- Node.js 16+
-- PostgreSQL 12+
-- npm atau yarn
+- Node.js 18+
+- MariaDB 11.4+ (MySQL compatible)
+- npm
 
 ## 1. Setup Database (2 menit)
 
 ```bash
-createdb cs_commission
-psql -d cs_commission -f schema.sql
-```
+# Login ke MariaDB dan buat database
+mysql -u root -p -e "CREATE DATABASE cs_commission"
 
-Output:
-```
-CREATE TABLE
-CREATE TABLE
-CREATE INDEX
-INSERT 0 3
+# Jalankan skema
+mysql -u root -p cs_commission < schema_mariadb.sql
 ```
 
 ## 2. Setup Backend (1.5 menit)
@@ -31,14 +26,13 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` dengan PostgreSQL credentials Anda:
-```
+Edit `.env` dengan kredensial MariaDB Anda:
+```env
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=3306
 DB_NAME=cs_commission
-DB_USER=postgres
-DB_PASSWORD=your_password
-JWT_SECRET=your_secret_key_min_32_chars
+DB_USER=root
+DB_PASSWORD=password_anda
 ```
 
 Seed database dengan test data:
@@ -46,108 +40,25 @@ Seed database dengan test data:
 npm run seed
 ```
 
-Output:
-```
-Seeding database...
-Database seeded successfully!
-
-Test accounts:
-- Email: admin@commission.local | Password: admin123456 | Role: admin
-- Email: hrd@commission.local | Password: admin123456 | Role: hrd
-- Email: cs1@commission.local | Password: cs123456 | Role: cs
-```
-
 Start backend:
 ```bash
 npm run dev
 ```
 
-Output:
-```
-Server running at http://localhost:3000
-Environment: development
-```
-
 ## 3. Setup Frontend (1.5 menit)
 
-Di terminal baru:
+Buka terminal baru di folder utama:
 
 ```bash
-cd frontend
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Output:
-```
-VITE v5.4.8  ready in 205 ms
-➜  Local:   http://localhost:5173/
-```
-
-## 4. Test Login (Instant)
+## 4. Test Login
 
 1. Buka http://localhost:5173
 2. Login dengan:
    - Email: `admin@commission.local`
    - Password: `admin123456`
-3. Anda akan melihat dashboard
 
-## 5. Test API (Instant)
-
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@commission.local","password":"admin123456"}'
-```
-
-Response:
-```json
-{
-  "token": "eyJhbGc...",
-  "user": {
-    "id": "uuid...",
-    "email": "admin@commission.local",
-    "role": "admin"
-  }
-}
-```
-
-## Done!
-
-Backend: http://localhost:3000
-Frontend: http://localhost:5173
-
-## Next Steps
-
-- Baca `README.md` untuk overview lengkap
-- Lihat `API-ENDPOINTS.md` untuk semua endpoints
-- Lihat `SETUP.md` untuk production deployment
-- Check `EXAMPLE-REQUESTS.md` untuk curl examples
-
-## Troubleshooting
-
-**Error: Cannot connect to PostgreSQL**
-```bash
-# Check PostgreSQL running
-sudo systemctl status postgresql
-
-# Or start it
-sudo systemctl start postgresql
-```
-
-**Error: Port 3000 already in use**
-```bash
-# Kill process using port 3000
-sudo lsof -i :3000
-kill -9 <PID>
-```
-
-**Error: npm run seed fails**
-- Pastikan database sudah created: `createdb cs_commission`
-- Pastikan schema.sql sudah dijalankan: `psql -d cs_commission -f schema.sql`
-- Check `.env` credentials
-
-**Error: Cannot connect to backend from frontend**
-- Check `VITE_API_BASE_URL` di `frontend/.env`
-- Harus sama dengan backend URL (default: `http://localhost:3000/api`)
+## Done!🚀

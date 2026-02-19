@@ -3,16 +3,16 @@ import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 
 export const loginUser = async (email, password) => {
-  const result = await pool.query(
-    'SELECT id, email, password, role FROM users WHERE email = $1',
+  const [rows] = await pool.execute(
+    'SELECT id, email, password, role FROM users WHERE email = ?',
     [email]
   );
 
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     throw new Error('User not found');
   }
 
-  const user = result.rows[0];
+  const user = rows[0];
   const isValidPassword = await bcrypt.compare(password, user.password);
 
   if (!isValidPassword) {
@@ -36,29 +36,29 @@ export const loginUser = async (email, password) => {
 };
 
 export const getUserProfile = async (userId) => {
-  const result = await pool.query(
-    'SELECT id, email, role, branch_id, created_at FROM users WHERE id = $1',
+  const [rows] = await pool.execute(
+    'SELECT id, email, role, branch_id, created_at FROM users WHERE id = ?',
     [userId]
   );
 
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     throw new Error('User not found');
   }
 
-  return result.rows[0];
+  return rows[0];
 };
 
 export const changePassword = async (userId, oldPassword, newPassword) => {
-  const result = await pool.query(
-    'SELECT password FROM users WHERE id = $1',
+  const [rows] = await pool.execute(
+    'SELECT password FROM users WHERE id = ?',
     [userId]
   );
 
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     throw new Error('User not found');
   }
 
-  const isValidPassword = await bcrypt.compare(oldPassword, result.rows[0].password);
+  const isValidPassword = await bcrypt.compare(oldPassword, rows[0].password);
 
   if (!isValidPassword) {
     throw new Error('Invalid old password');
@@ -66,8 +66,8 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  await pool.query(
-    'UPDATE users SET password = $1 WHERE id = $2',
+  await pool.execute(
+    'UPDATE users SET password = ? WHERE id = ?',
     [hashedPassword, userId]
   );
 

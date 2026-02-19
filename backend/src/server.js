@@ -11,6 +11,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enable trust proxy for multi-hop setup (Hardened to trust only WGhub IP)
+app.set('trust proxy', '10.40.0.1');
+
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   credentials: true,

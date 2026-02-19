@@ -1,47 +1,50 @@
 import pool from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createWithdrawalRequest = async (userId, nominal) => {
   try {
-    const commissionsResult = await pool.query(
-      'SELECT SUM(commission_amount) as total_komisi FROM commissions WHERE user_id = $1 AND status = $2',
+    const [commRows] = await pool.execute(
+      'SELECT SUM(commission_amount) as total_komisi FROM commissions WHERE user_id = ? AND status = ?',
       [userId, 'paid']
     );
 
-    const totalKomisi = commissionsResult.rows[0]?.total_komisi || 0;
+    const totalKomisi = commRows[0]?.total_komisi || 0;
 
-    const mutationsResult = await pool.query(
+    const [mutRows] = await pool.execute(
       `SELECT SUM(CASE WHEN tipe = 'masuk' THEN nominal ELSE -nominal END) as net_mutations
        FROM commission_mutations
-       WHERE user_id = $1`,
+       WHERE user_id = ?`,
       [userId]
     );
 
-    const totalMutations = mutationsResult.rows[0]?.net_mutations || 0;
-    const availableBalance = totalKomisi + totalMutations;
+    const totalMutations = mutRows[0]?.net_mutations || 0;
+    const availableBalance = parseFloat(totalKomisi) + parseFloat(totalMutations);
 
     if (nominal > availableBalance) {
       throw new Error(`Insufficient balance. Available: ${availableBalance}, Requested: ${nominal}`);
     }
 
-    const userResult = await pool.query(
-      'SELECT branch_id FROM users WHERE id = $1',
+    const [userRows] = await pool.execute(
+      'SELECT branch_id FROM users WHERE id = ?',
       [userId]
     );
 
-    const branchId = userResult.rows[0]?.branch_id;
+    const branchId = userRows[0]?.branch_id;
+    const id = uuidv4();
 
-    const result = await pool.query(
-      `INSERT INTO withdrawal_requests (user_id, branch_id, nominal, status, tanggal)
-       VALUES ($1, $2, $3, $4, CURRENT_DATE)
-       RETURNING *`,
-      [userId, branchId, nominal, 'pending']
+    await pool.execute(
+      `INSERT INTO withdrawal_requests (id, user_id, branch_id, nominal, status, tanggal)
+       VALUES (?, ?, ?, ?, ?, CURRENT_DATE)`,
+      [id, userId, branchId, nominal, 'pending']
     );
+
+    const [newWd] = await pool.execute('SELECT * FROM withdrawal_requests WHERE id = ?', [id]);
 
     return {
       success: true,
       message: 'Withdrawal request created',
       availableBalance: availableBalance,
-      withdrawal: result.rows[0],
+      withdrawal: newWd[0],
     };
   } catch (error) {
     throw error;
@@ -50,31 +53,32 @@ export const createWithdrawalRequest = async (userId, nominal) => {
 
 export const approveWithdrawalRequest = async (withdrawalId, approved, catatan) => {
   try {
-    const withdrawalResult = await pool.query(
-      'SELECT * FROM withdrawal_requests WHERE id = $1',
+    const [wdRows] = await pool.execute(
+      'SELECT * FROM withdrawal_requests WHERE id = ?',
       [withdrawalId]
     );
 
-    if (withdrawalResult.rows.length === 0) {
+    if (wdRows.length === 0) {
       throw new Error('Withdrawal request not found');
     }
 
-    const withdrawal = withdrawalResult.rows[0];
+    const withdrawal = wdRows[0];
     const newStatus = approved ? 'approved' : 'rejected';
 
-    const updateResult = await pool.query(
+    await pool.execute(
       `UPDATE withdrawal_requests
-       SET status = $1, catatan = $2
-       WHERE id = $3
-       RETURNING *`,
+       SET status = ?, catatan = ?
+       WHERE id = ?`,
       [newStatus, catatan || '', withdrawalId]
     );
 
     if (approved) {
-      await pool.query(
-        `INSERT INTO commission_mutations (user_id, branch_id, tanggal, tipe, nominal, keterangan)
-         VALUES ($1, $2, CURRENT_DATE, $3, $4, $5)`,
+      const mutId = uuidv4();
+      await pool.execute(
+        `INSERT INTO commission_mutations (id, user_id, branch_id, tanggal, tipe, nominal, keterangan)
+         VALUES (?, ?, ?, CURRENT_DATE, ?, ?, ?)`,
         [
+          mutId,
           withdrawal.user_id,
           withdrawal.branch_id,
           'keluar',
@@ -84,11 +88,13 @@ export const approveWithdrawalRequest = async (withdrawalId, approved, catatan) 
       );
     }
 
+    const [updatedWd] = await pool.execute('SELECT * FROM withdrawal_requests WHERE id = ?', [withdrawalId]);
+
     return {
       success: true,
       message: `Withdrawal request ${newStatus}`,
       status: newStatus,
-      withdrawal: updateResult.rows[0],
+      withdrawal: updatedWd[0],
     };
   } catch (error) {
     throw error;
@@ -101,24 +107,24 @@ export const getWithdrawalRequests = async (filters = {}) => {
     const params = [];
 
     if (filters.userId) {
-      query += ` AND user_id = $${params.length + 1}`;
+      query += ` AND user_id = ?`;
       params.push(filters.userId);
     }
 
     if (filters.branchId) {
-      query += ` AND branch_id = $${params.length + 1}`;
+      query += ` AND branch_id = ?`;
       params.push(filters.branchId);
     }
 
     if (filters.status) {
-      query += ` AND status = $${params.length + 1}`;
+      query += ` AND status = ?`;
       params.push(filters.status);
     }
 
     query += ' ORDER BY tanggal DESC';
 
-    const result = await pool.query(query, params);
-    return result.rows;
+    const [rows] = await pool.execute(query, params);
+    return rows;
   } catch (error) {
     throw error;
   }
@@ -126,26 +132,26 @@ export const getWithdrawalRequests = async (filters = {}) => {
 
 export const getUserBalance = async (userId) => {
   try {
-    const commissionsResult = await pool.query(
-      'SELECT SUM(commission_amount) as total_komisi FROM commissions WHERE user_id = $1 AND status = $2',
+    const [commRows] = await pool.execute(
+      'SELECT SUM(commission_amount) as total_komisi FROM commissions WHERE user_id = ? AND status = ?',
       [userId, 'paid']
     );
 
-    const totalKomisi = commissionsResult.rows[0]?.total_komisi || 0;
+    const totalKomisi = commRows[0]?.total_komisi || 0;
 
-    const mutationsResult = await pool.query(
+    const [mutRows] = await pool.execute(
       `SELECT SUM(CASE WHEN tipe = 'masuk' THEN nominal ELSE -nominal END) as net_mutations
        FROM commission_mutations
-       WHERE user_id = $1`,
+       WHERE user_id = ?`,
       [userId]
     );
 
-    const totalMutations = mutationsResult.rows[0]?.net_mutations || 0;
+    const totalMutations = mutRows[0]?.net_mutations || 0;
 
     return {
-      totalCommissions: totalKomisi,
-      totalMutations: totalMutations,
-      availableBalance: totalKomisi + totalMutations,
+      totalCommissions: parseFloat(totalKomisi),
+      totalMutations: parseFloat(totalMutations),
+      availableBalance: parseFloat(totalKomisi) + parseFloat(totalMutations),
     };
   } catch (error) {
     throw error;

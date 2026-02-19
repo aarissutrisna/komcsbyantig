@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../services/api';
 
 interface Profile {
   id: string;
@@ -24,41 +24,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchProfile();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error('User profile not found');
-
+      const data = await api.get<Profile>('/auth/profile');
       setUser(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      localStorage.removeItem('token');
       setUser(null);
     } finally {
       setLoading(false);
@@ -66,19 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { token, user: userData } = await api.post<{ token: string, user: Profile }>('/auth/login', {
       email,
       password,
     });
 
-    if (error) throw error;
-    if (!data.user) throw new Error('Login failed');
-
-    await fetchProfile(data.user.id);
+    localStorage.setItem('token', token);
+    setUser(userData);
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('token');
     setUser(null);
   };
 

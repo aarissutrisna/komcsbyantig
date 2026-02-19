@@ -1,27 +1,28 @@
 import pool from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const calculateCommissionByDate = async (branchId, tanggal) => {
   try {
-    const omzetResult = await pool.query(
-      'SELECT * FROM omzet WHERE branch_id = $1 AND date = $2',
+    const [omzetRows] = await pool.execute(
+      'SELECT * FROM omzet WHERE branch_id = ? AND date = ?',
       [branchId, tanggal]
     );
 
-    if (omzetResult.rows.length === 0) {
+    if (omzetRows.length === 0) {
       return { success: false, message: 'No omzet data found for this date' };
     }
 
-    const omzetData = omzetResult.rows[0];
-    const branchResult = await pool.query(
-      'SELECT target_min, target_max FROM branches WHERE id = $1',
+    const omzetData = omzetRows[0];
+    const [branchRows] = await pool.execute(
+      'SELECT target_min, target_max FROM branches WHERE id = ?',
       [branchId]
     );
 
-    if (branchResult.rows.length === 0) {
+    if (branchRows.length === 0) {
       throw new Error('Branch not found');
     }
 
-    const branch = branchResult.rows[0];
+    const branch = branchRows[0];
     const omzetTotal = omzetData.amount || 0;
     let komisiPersen = 0;
 
@@ -31,18 +32,18 @@ export const calculateCommissionByDate = async (branchId, tanggal) => {
       komisiPersen = 0.2;
     }
 
-    const csResult = await pool.query(
-      'SELECT id, faktor_pengali FROM users WHERE branch_id = $1 AND role = $2',
+    const [csRows] = await pool.execute(
+      'SELECT id, faktor_pengali FROM users WHERE branch_id = ? AND role = ?',
       [branchId, 'cs']
     );
 
-    const attendanceResult = await pool.query(
-      'SELECT user_id, status_kehadiran FROM attendance_data WHERE branch_id = $1 AND tanggal = $2',
+    const [attendanceRows] = await pool.execute(
+      'SELECT user_id, status_kehadiran FROM attendance_data WHERE branch_id = ? AND tanggal = ?',
       [branchId, tanggal]
     );
 
-    const commissionData = csResult.rows.map((cs) => {
-      const attendance = attendanceResult.rows.find((a) => a.user_id === cs.id);
+    const commissionData = csRows.map((cs) => {
+      const attendance = attendanceRows.find((a) => a.user_id === cs.id);
       const status = attendance?.status_kehadiran || 'alpha';
 
       let statusMultiplier = 0;
@@ -67,12 +68,14 @@ export const calculateCommissionByDate = async (branchId, tanggal) => {
 
     if (commissionData.length > 0) {
       for (const commission of commissionData) {
-        await pool.query(
-          `INSERT INTO commissions (user_id, branch_id, omzet_total, commission_amount, commission_percentage, period_start, period_end)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (user_id, period_start) DO UPDATE SET
-           commission_amount = $4, commission_percentage = $5`,
+        const id = uuidv4();
+        await pool.execute(
+          `INSERT INTO commissions (id, user_id, branch_id, omzet_total, commission_amount, commission_percentage, period_start, period_end)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+           commission_amount = ?, commission_percentage = ?`,
           [
+            id,
             commission.user_id,
             commission.branch_id,
             commission.omzet,
@@ -80,6 +83,8 @@ export const calculateCommissionByDate = async (branchId, tanggal) => {
             commission.komisi_persen,
             commission.tanggal,
             commission.tanggal,
+            commission.total_komisi,
+            commission.komisi_persen
           ]
         );
       }
@@ -99,13 +104,13 @@ export const calculateCommissionByDate = async (branchId, tanggal) => {
 
 export const calculateCommissionByBranch = async (branchId, periodStart, periodEnd) => {
   try {
-    const omzetResult = await pool.query(
-      'SELECT DISTINCT date FROM omzet WHERE branch_id = $1 AND date >= $2 AND date <= $3',
+    const [omzetRows] = await pool.execute(
+      'SELECT DISTINCT date FROM omzet WHERE branch_id = ? AND date >= ? AND date <= ?',
       [branchId, periodStart, periodEnd]
     );
 
     const results = [];
-    for (const row of omzetResult.rows) {
+    for (const row of omzetRows) {
       const result = await calculateCommissionByDate(branchId, row.date);
       results.push(result);
     }

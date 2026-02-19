@@ -1,13 +1,17 @@
 import pool from '../config/database.js';
 import * as commissionsService from './commissionsService.js';
+import { v4 as uuidv4 } from 'uuid'; // I'll need to add uuid to package.json dependencies
 
 export const createOmzet = async (userId, branchId, amount, date, description) => {
   try {
-    const result = await pool.query(
-      'INSERT INTO omzet (user_id, branch_id, amount, date, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [userId, branchId, amount, date, description]
+    const id = uuidv4();
+    await pool.execute(
+      'INSERT INTO omzet (id, user_id, branch_id, amount, date, description) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, userId, branchId, amount, date, description]
     );
-    return result.rows[0];
+
+    const [rows] = await pool.execute('SELECT * FROM omzet WHERE id = ?', [id]);
+    return rows[0];
   } catch (error) {
     throw error;
   }
@@ -15,11 +19,11 @@ export const createOmzet = async (userId, branchId, amount, date, description) =
 
 export const getOmzetByDate = async (date) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM omzet WHERE date = $1 ORDER BY branch_id',
+    const [rows] = await pool.execute(
+      'SELECT * FROM omzet WHERE date = ? ORDER BY branch_id',
       [date]
     );
-    return result.rows;
+    return rows;
   } catch (error) {
     throw error;
   }
@@ -27,11 +31,11 @@ export const getOmzetByDate = async (date) => {
 
 export const getOmzetByBranch = async (branchId, startDate, endDate) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM omzet WHERE branch_id = $1 AND date >= $2 AND date <= $3 ORDER BY date DESC',
+    const [rows] = await pool.execute(
+      'SELECT * FROM omzet WHERE branch_id = ? AND date >= ? AND date <= ? ORDER BY date DESC',
       [branchId, startDate, endDate]
     );
-    return result.rows;
+    return rows;
   } catch (error) {
     throw error;
   }
@@ -39,11 +43,11 @@ export const getOmzetByBranch = async (branchId, startDate, endDate) => {
 
 export const getOmzetByUser = async (userId) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM omzet WHERE user_id = $1 ORDER BY date DESC',
+    const [rows] = await pool.execute(
+      'SELECT * FROM omzet WHERE user_id = ? ORDER BY date DESC',
       [userId]
     );
-    return result.rows;
+    return rows;
   } catch (error) {
     throw error;
   }
@@ -54,7 +58,7 @@ export const getOmzetStats = async (branchId, month, year) => {
     const monthStr = String(month).padStart(2, '0');
     const datePrefix = `${year}-${monthStr}`;
 
-    const result = await pool.query(
+    const [rows] = await pool.execute(
       `SELECT
         SUM(amount) as total_omzet,
         COUNT(*) as count,
@@ -62,11 +66,11 @@ export const getOmzetStats = async (branchId, month, year) => {
         MIN(amount) as min,
         MAX(amount) as max
        FROM omzet
-       WHERE branch_id = $1 AND date LIKE $2`,
+       WHERE branch_id = ? AND date LIKE ?`,
       [branchId, `${datePrefix}%`]
     );
 
-    return result.rows[0];
+    return rows[0];
   } catch (error) {
     throw error;
   }
@@ -103,18 +107,20 @@ export const syncOmzetFromN8N = async (branchId, omzetItems) => {
 
     const results = [];
     for (const item of omzetData) {
-      const result = await pool.query(
-        `INSERT INTO omzet (branch_id, amount, date, description)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (branch_id, date) DO UPDATE SET amount = $2
-         RETURNING *`,
-        [item.branchId, item.total, item.tanggal, `Cash: ${item.cash}, Piutang: ${item.piutang}`]
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO omzet (id, branch_id, amount, date, description)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE amount = ?`,
+        [id, item.branchId, item.total, item.tanggal, `Cash: ${item.cash}, Piutang: ${item.piutang}`, item.total]
       );
-      results.push(result.rows[0]);
+
+      const [rows] = await pool.execute('SELECT * FROM omzet WHERE branch_id = ? AND date = ?', [item.branchId, item.tanggal]);
+      results.push(rows[0]);
     }
 
-    await pool.query(
-      'UPDATE branches SET last_sync_at = NOW() WHERE id = $1',
+    await pool.execute(
+      'UPDATE branches SET last_sync_at = NOW() WHERE id = ?',
       [branchId]
     );
 
@@ -126,16 +132,16 @@ export const syncOmzetFromN8N = async (branchId, omzetItems) => {
 
 export const fetchAndSyncFromN8N = async (branchId, startDate, endDate) => {
   try {
-    const branchResult = await pool.query(
-      'SELECT n8n_endpoint FROM branches WHERE id = $1',
+    const [branches] = await pool.execute(
+      'SELECT n8n_endpoint FROM branches WHERE id = ?',
       [branchId]
     );
 
-    if (branchResult.rows.length === 0 || !branchResult.rows[0].n8n_endpoint) {
+    if (branches.length === 0 || !branches[0].n8n_endpoint) {
       throw new Error('Branch not found or N8N endpoint not configured');
     }
 
-    const n8nEndpoint = branchResult.rows[0].n8n_endpoint;
+    const n8nEndpoint = branches[0].n8n_endpoint;
 
     const response = await fetch(n8nEndpoint, {
       method: 'POST',

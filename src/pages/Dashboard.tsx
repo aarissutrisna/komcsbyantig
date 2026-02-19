@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { api } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { TrendingUp, Users, DollarSign, Calendar } from 'lucide-react';
 
+interface Stats {
+  todayOmzet: number;
+  todayCommission: number;
+  totalCommission: number;
+  monthlyOmzet: number;
+}
+
 export function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     todayOmzet: 0,
     todayCommission: 0,
     totalCommission: 0,
@@ -22,53 +29,10 @@ export function Dashboard() {
     if (!user) return;
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        .toISOString()
-        .split('T')[0];
-
-      const { data: todayOmzet } = await supabase
-        .from('omzet')
-        .select('total')
-        .eq('tanggal', today)
-        .maybeSingle();
-
-      const { data: monthlyOmzetData } = await supabase
-        .from('omzet')
-        .select('total')
-        .gte('tanggal', firstDayOfMonth)
-        .lte('tanggal', today);
-
-      const monthlyTotal = monthlyOmzetData?.reduce((sum, row) => sum + (row.total || 0), 0) || 0;
-
-      const { data: todayCommissionData } = await supabase
-        .from('commissions')
-        .select('nominal')
-        .eq('tanggal', today)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const { data: totalCommissionData } = await supabase
-        .from('commissions')
-        .select('nominal')
-        .eq('user_id', user.id);
-
-      const totalCommission = totalCommissionData?.reduce((sum, row) => sum + (row.nominal || 0), 0) || 0;
-
-      setStats({
-        todayOmzet: todayOmzet?.total || 0,
-        monthlyOmzet: monthlyTotal,
-        todayCommission: todayCommissionData?.nominal || 0,
-        totalCommission,
-      });
+      const data = await api.get<Stats>('/omzet/stats');
+      setStats(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
-      setStats({
-        todayOmzet: 0,
-        monthlyOmzet: 0,
-        todayCommission: 0,
-        totalCommission: 0,
-      });
     } finally {
       setLoading(false);
     }

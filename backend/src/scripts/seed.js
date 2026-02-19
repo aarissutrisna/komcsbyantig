@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import pool from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
 
 async function seed() {
   try {
@@ -8,34 +9,34 @@ async function seed() {
     const adminPassword = await bcrypt.hash('admin123456', 10);
     const csPassword = await bcrypt.hash('cs123456', 10);
 
-    const branchResult = await pool.query(
-      'SELECT id FROM branches WHERE name = $1',
+    const [branchRows] = await pool.execute(
+      'SELECT id FROM branches WHERE name = ?',
       ['Jakarta']
     );
 
-    let branchId = branchResult.rows[0]?.id;
+    let branchId = branchRows[0]?.id;
 
     if (!branchId) {
-      const newBranch = await pool.query(
-        'INSERT INTO branches (name, city) VALUES ($1, $2) RETURNING id',
-        ['Jakarta', 'Jakarta']
+      branchId = uuidv4();
+      await pool.execute(
+        'INSERT INTO branches (id, name, city) VALUES (?, ?, ?)',
+        [branchId, 'Jakarta', 'Jakarta']
       );
-      branchId = newBranch.rows[0].id;
     }
 
-    await pool.query(
-      'INSERT INTO users (email, password, role, branch_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      ['admin@commission.local', adminPassword, 'admin', branchId]
+    await pool.execute(
+      'INSERT IGNORE INTO users (id, email, password, role, branch_id) VALUES (?, ?, ?, ?, ?)',
+      [uuidv4(), 'admin@commission.local', adminPassword, 'admin', branchId]
     );
 
-    await pool.query(
-      'INSERT INTO users (email, password, role, branch_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      ['hrd@commission.local', adminPassword, 'hrd', branchId]
+    await pool.execute(
+      'INSERT IGNORE INTO users (id, email, password, role, branch_id) VALUES (?, ?, ?, ?, ?)',
+      [uuidv4(), 'hrd@commission.local', adminPassword, 'hrd', branchId]
     );
 
-    await pool.query(
-      'INSERT INTO users (email, password, role, branch_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      ['cs1@commission.local', csPassword, 'cs', branchId]
+    await pool.execute(
+      'INSERT IGNORE INTO users (id, email, password, role, branch_id) VALUES (?, ?, ?, ?, ?)',
+      [uuidv4(), 'cs1@commission.local', csPassword, 'cs', branchId]
     );
 
     console.log('Database seeded successfully!');
