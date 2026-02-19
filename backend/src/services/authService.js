@@ -4,7 +4,7 @@ import pool from '../config/database.js';
 
 export const loginUser = async (email, password) => {
   const [rows] = await pool.execute(
-    'SELECT id, email, password, role FROM users WHERE email = ?',
+    'SELECT id, username, nama, email, password, role FROM users WHERE email = ?',
     [email]
   );
 
@@ -29,6 +29,8 @@ export const loginUser = async (email, password) => {
     token,
     user: {
       id: user.id,
+      username: user.username,
+      nama: user.nama,
       email: user.email,
       role: user.role,
     },
@@ -37,7 +39,7 @@ export const loginUser = async (email, password) => {
 
 export const getUserProfile = async (userId) => {
   const [rows] = await pool.execute(
-    'SELECT id, email, role, branch_id, created_at FROM users WHERE id = ?',
+    'SELECT id, username, nama, email, role, branch_id, faktor_pengali, created_at FROM users WHERE id = ?',
     [userId]
   );
 
