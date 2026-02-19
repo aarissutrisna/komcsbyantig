@@ -28,7 +28,6 @@ export function Branches() {
       setBranches(data);
     } catch (err) {
       console.error('Fetch branches error:', err);
-      setError('Gagal mengambil data cabang');
     } finally {
       setLoading(false);
     }
