@@ -13,7 +13,17 @@ export const loginUser = async (email, password) => {
   }
 
   const user = rows[0];
+  console.log('--- DEBUG LOGIN ---');
+  console.log('Email:', email);
+  console.log('Input Password Length:', password.length);
+  console.log('Stored Hash in DB:', user.password);
+
+  const testHash = await bcrypt.hash('admin123', 10);
+  console.log('Generated hash for "admin123" in this env:', testHash);
+
   const isValidPassword = await bcrypt.compare(password, user.password);
+  console.log('Comparison Result:', isValidPassword);
+  console.log('--- END DEBUG ---');
 
   if (!isValidPassword) {
     throw new Error('Invalid password');
