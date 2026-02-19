@@ -82,3 +82,42 @@ export const getAllUsers = async () => {
   );
   return rows;
 };
+
+import { v4 as uuidv4 } from 'uuid';
+
+export const createUser = async (userData) => {
+  const { username, nama, email, password, role, branchId, faktorPengali } = userData;
+  const id = uuidv4();
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await pool.execute(
+    'INSERT INTO users (id, username, nama, email, password, role, branch_id, faktor_pengali) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, username, nama, email, hashedPassword, role, branchId || null, faktorPengali || 1.0]
+  );
+
+  return getUserProfile(id);
+};
+
+export const updateUser = async (id, userData) => {
+  const { username, nama, email, password, role, branchId, faktorPengali } = userData;
+
+  let query = 'UPDATE users SET username = ?, nama = ?, email = ?, role = ?, branch_id = ?, faktor_pengali = ?';
+  let params = [username, nama, email, role, branchId || null, faktorPengali || 1.0];
+
+  if (password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    query += ', password = ?';
+    params.push(hashedPassword);
+  }
+
+  query += ' WHERE id = ?';
+  params.push(id);
+
+  await pool.execute(query, params);
+  return getUserProfile(id);
+};
+
+export const deleteUser = async (id) => {
+  await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+  return { success: true };
+};

@@ -39,10 +39,29 @@ export const changePassword = async (req, res) => {
   }
 };
 
-export const getAll = async (req, res) => {
+export const create = async (req, res) => {
   try {
-    const users = await authService.getAllUsers();
-    res.json(users);
+    const user = await authService.createUser(req.body);
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const update = async (req, res) => {
+  try {
+    const user = await authService.updateUser(req.params.id, req.body);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const remove = async (req, res) => {
+  try {
+    await authService.deleteUser(req.params.id);
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
