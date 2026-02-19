@@ -6,7 +6,7 @@ VALUES (
   'admin',
   'Super Admin',
   'admin@gmail.com', 
-  '$2b$10$m8G7p0l7y.X0XyX0XyX0XueS/vX6Y1XyX0XyX0XyX0XyX0XyX0XyX', -- valid admin123 hash
+  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgNI90fthteif7vN6WNo3BfPhG.6', -- verified hash for admin123
   'admin', 
   NULL,
   1.00
