@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes.js';
 import commissionsRoutes from './routes/commissionsRoutes.js';
 import omzetRoutes from './routes/omzetRoutes.js';
 import withdrawalsRoutes from './routes/withdrawalsRoutes.js';
+import branchesRoutes from './routes/branchesRoutes.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/commissions', commissionsRoutes);
 app.use('/api/omzet', omzetRoutes);
 app.use('/api/withdrawals', withdrawalsRoutes);
+app.use('/api/branches', branchesRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

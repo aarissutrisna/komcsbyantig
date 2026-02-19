@@ -32,7 +32,12 @@ export function Dashboard() {
     if (!user) return;
 
     try {
-      const data = await api.get<Stats>('/omzet/stats');
+      const branchId = user.branch_id || 'all'; // Placeholder if no branch
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+
+      const data = await api.get<Stats>(`/omzet/stats?branchId=${branchId}&month=${month}&year=${year}`);
       setStats(data);
     } catch (error) {
       console.error('Error fetching stats:', error);

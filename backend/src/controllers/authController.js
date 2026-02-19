@@ -38,3 +38,12 @@ export const changePassword = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+export const getAll = async (req, res) => {
+  try {
+    const users = await authService.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
