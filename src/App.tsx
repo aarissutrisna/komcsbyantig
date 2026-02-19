@@ -1,86 +1,26 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { Layout } from './components/Layout';
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { DataAttendance } from './pages/DataAttendance';
-import { Mutations } from './pages/Mutations';
-import { Branches } from './pages/Branches';
-import { Users } from './pages/Users';
-import { Settings } from './pages/Settings';
+import React from 'react';
+import { ThemeProvider } from './contexts/ThemeContext';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
 
-function App() {
+const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/data"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <DataAttendance />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mutations"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Mutations />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/branches"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <Branches />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <Users />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <div className="min-h-screen bg-white dark:bg-gray-900 selection:bg-primary/30 transition-colors duration-300">
+        <Navbar />
+        <main>
+          <Hero />
+        </main>
+
+        {/* Footer simple for completeness */}
+        <footer className="py-12 border-t border-gray-200 dark:border-gray-800 text-center">
+          <p className="text-gray-500 dark:text-gray-400">
+            © 2026 Antigravity. Built for performance and aesthetics.
+          </p>
+        </footer>
+      </div>
+    </ThemeProvider>
   );
-}
+};
 
 export default App;
