@@ -78,10 +78,10 @@ export function Settings() {
                 </span>
               </dd>
             </div>
-            {user?.faktor_pengali && (
+            {user?.role === 'cs' && (
               <div>
-                <dt className="text-xs font-bold text-gray-400 uppercase tracking-wider">Faktor Pengali</dt>
-                <dd className="text-gray-900 dark:text-white font-semibold text-lg mt-1">{user.faktor_pengali}x</dd>
+                <dt className="text-xs font-bold text-gray-400 uppercase tracking-wider">Faktor Komisi</dt>
+                <dd className="text-gray-900 dark:text-white font-semibold text-lg mt-1">{user.faktor_pengali ?? 1}x</dd>
               </div>
             )}
           </dl>

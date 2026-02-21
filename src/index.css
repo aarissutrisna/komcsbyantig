@@ -133,6 +133,75 @@
       transform: rotate(180deg);
     }
   }
+
+  /* Modal Specific Animations */
+  @keyframes modalBackdrop {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modalAppear {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes modalSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .animate-modal-backdrop {
+    animation: modalBackdrop 0.2s ease-out both;
+  }
+
+  .animate-modal-appear {
+    animation: modalAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-modal-slide-up {
+    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Custom Scrollbar Utility */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors;
+  }
+
+  /* Prevent iOS Auto-Zoom on Inputs inside Modals */
+  @media screen and (max-width: 640px) {
+
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+      font-size: 16px !important;
+    }
+  }
 }
 
 /* Respect user's motion preferences (WCAG 2.1 – 2.3.3) */
@@ -146,4 +215,26 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ─── Dark Mode: Fix native <select> / <option> contrast ────────────────────
+   Tailwind's dark: prefix does not apply to native <option> elements which
+   are rendered by the OS. We force a dark palette globally for .dark mode.    */
+.dark select {
+  color-scheme: dark;
+  background-color: #1f2937;
+  /* gray-800 */
+  color: #f9fafb;
+  /* gray-50  */
+}
+
+.dark select option {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+.dark select option:checked {
+  background-color: #2563eb;
+  /* blue-600 */
+  color: #ffffff;
 }

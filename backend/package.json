@@ -5,9 +5,10 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
+    "migrate": "node src/scripts/migrate.js",
     "build": "echo 'No build needed for Node.js backend'"
   },
   "keywords": [
@@ -18,12 +19,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.9.1",
-    "jsonwebtoken": "^9.0.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mysql2": "^3.9.1",
+    "node-cron": "^3.0.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

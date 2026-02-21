@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import pool from '../config/database.js';
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (username, password) => {
   const [rows] = await pool.execute(
-    'SELECT id, username, nama, email, password, role FROM users WHERE email = ?',
-    [email]
+    'SELECT id, username, nama, email, password, role, branch_id, is_active FROM users WHERE username = ?',
+    [username]
   );
 
   if (rows.length === 0) {
@@ -13,6 +14,11 @@ export const loginUser = async (email, password) => {
   }
 
   const user = rows[0];
+
+  if (!user.is_active) {
+    throw new Error('Akun ini sudah dinonaktifkan. Hubungi Admin.');
+  }
+
   const isValidPassword = await bcrypt.compare(password, user.password);
 
   if (!isValidPassword) {
@@ -20,7 +26,12 @@ export const loginUser = async (email, password) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      branchId: user.branch_id
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRY }
   );
@@ -33,6 +44,7 @@ export const loginUser = async (email, password) => {
       nama: user.nama,
       email: user.email,
       role: user.role,
+      branch_id: user.branch_id
     },
   };
 };
@@ -76,14 +88,26 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
   return { message: 'Password changed successfully' };
 };
 
-export const getAllUsers = async () => {
-  const [rows] = await pool.execute(
-    'SELECT id, username, nama, email, role, branch_id, faktor_pengali, created_at FROM users'
-  );
+export const getAllUsers = async (branchId = null, includeInactive = true) => {
+  let query = 'SELECT DISTINCT u.id, u.username, u.nama, u.email, u.role, u.branch_id, u.faktor_pengali, u.is_active, u.resign_date, u.created_at FROM users u';
+  const params = [];
+  const conds = [];
+
+  if (branchId) {
+    query += ' LEFT JOIN cs_penugasan p ON u.id = p.user_id';
+    conds.push('(u.branch_id = ? OR p.cabang_id = ?)');
+    params.push(branchId, branchId);
+  }
+
+  if (!includeInactive) {
+    conds.push('u.is_active = 1');
+  }
+
+  if (conds.length) query += ' WHERE ' + conds.join(' AND ');
+
+  const [rows] = await pool.execute(query, params);
   return rows;
 };
-
-import { v4 as uuidv4 } from 'uuid';
 
 export const createUser = async (userData) => {
   const { username, nama, email, password, role, branchId, faktorPengali } = userData;
@@ -92,7 +116,7 @@ export const createUser = async (userData) => {
 
   await pool.execute(
     'INSERT INTO users (id, username, nama, email, password, role, branch_id, faktor_pengali) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, username, nama, email, hashedPassword, role, branchId || null, faktorPengali || 1.0]
+    [id, username, nama, email, hashedPassword, role, branchId || null, parseFloat(faktorPengali || 1.0)]
   );
 
   return getUserProfile(id);
@@ -102,7 +126,7 @@ export const updateUser = async (id, userData) => {
   const { username, nama, email, password, role, branchId, faktorPengali } = userData;
 
   let query = 'UPDATE users SET username = ?, nama = ?, email = ?, role = ?, branch_id = ?, faktor_pengali = ?';
-  let params = [username, nama, email, role, branchId || null, faktorPengali || 1.0];
+  let params = [username, nama, email, role, branchId || null, parseFloat(faktorPengali || 1.0)];
 
   if (password) {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -120,4 +144,43 @@ export const updateUser = async (id, userData) => {
 export const deleteUser = async (id) => {
   await pool.execute('DELETE FROM users WHERE id = ?', [id]);
   return { success: true };
+};
+
+// ─── RESIGN USER ──────────────────────────────────────────────────────────────
+export const resignUser = async (userId, resignDate) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1. Disable login & set resign date
+    await conn.execute(
+      'UPDATE users SET is_active = 0, resign_date = ? WHERE id = ?',
+      [resignDate, userId]
+    );
+
+    // 2. Close all open penugasan (tanggal_selesai = resignDate)
+    await conn.execute(
+      `UPDATE cs_penugasan
+       SET tanggal_selesai = ?
+       WHERE user_id = ? AND (tanggal_selesai IS NULL OR tanggal_selesai > ?)`,
+      [resignDate, userId, resignDate]
+    );
+
+    await conn.commit();
+    return { success: true, message: 'User berhasil dinonaktifkan' };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
+// ─── REACTIVATE USER (undo resign) ───────────────────────────────────────────
+export const reactivateUser = async (userId) => {
+  await pool.execute(
+    'UPDATE users SET is_active = 1, resign_date = NULL WHERE id = ?',
+    [userId]
+  );
+  return { success: true, message: 'User berhasil diaktifkan kembali' };
 };

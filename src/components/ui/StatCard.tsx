@@ -1,14 +1,13 @@
 import React from 'react';
-import type { LucideIcon } from 'lucide-react';
-
 interface StatCardProps {
-    icon: LucideIcon;
+    icon: React.ElementType;
     iconBgClass: string;
     iconColorClass: string;
     label: string;
     value: string;
     className?: string;
     staggerClass?: string;
+    extra?: React.ReactNode;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -19,6 +18,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     value,
     className = '',
     staggerClass = '',
+    extra,
 }) => {
     return (
         <article
@@ -30,6 +30,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                 <div className={`p-2.5 rounded-xl ${iconBgClass}`}>
                     <Icon className={`w-6 h-6 ${iconColorClass}`} aria-hidden="true" />
                 </div>
+                {extra}
             </div>
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</h3>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>

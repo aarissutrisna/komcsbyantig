@@ -14,6 +14,8 @@ import {
   X,
   Sun,
   Moon,
+  ShieldAlert,
+  ClipboardList,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -38,7 +40,9 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Mutasi Komisi', href: '/mutations', icon: DollarSign, roles: ['admin', 'hrd', 'cs'] },
     { name: 'Cabang', href: '/branches', icon: Building2, roles: ['admin'] },
     { name: 'Pengguna', href: '/users', icon: Users, roles: ['admin'] },
+    { name: 'Penugasan', href: '/penugasan', icon: ClipboardList, roles: ['admin'] },
     { name: 'Pengaturan', href: '/settings', icon: Settings, roles: ['admin', 'hrd', 'cs'] },
+    { name: 'Setting Admin', href: '/admin/settings', icon: ShieldAlert, roles: ['admin'] },
   ];
 
   const filteredNavigation = navigation.filter(
@@ -120,8 +124,8 @@ export function Layout({ children }: LayoutProps) {
                   onClick={() => setSidebarOpen(false)}
                   aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${isActive
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold border-l-[3px] border-blue-600 dark:border-blue-400'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold border-l-[3px] border-blue-600 dark:border-blue-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />

@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Building2, Sun, Moon } from 'lucide-react';
 
 export function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export function Login() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(username, password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Login gagal');
@@ -120,20 +120,20 @@ export function Login() {
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <label
-                htmlFor="login-email"
+                htmlFor="login-username"
                 className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 px-1"
               >
-                Email
+                Username
               </label>
               <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-5 py-4 bg-gray-50/50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-950 focus:border-transparent outline-none transition-all placeholder-gray-400 shadow-sm focus:-translate-y-px"
                 required
-                autoComplete="email"
-                placeholder="m@example.com"
+                autoComplete="username"
+                placeholder="masukkan username"
                 aria-describedby={error ? 'login-error' : undefined}
               />
             </div>

@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building, Mail, Database, Plus, Pencil, Trash2, Key, Shield, User as UserIcon } from 'lucide-react';
+import { Building, Mail, Database, Plus, Pencil, Trash2, Key, Shield, User as UserIcon, UserX, UserCheck } from 'lucide-react';
 
 interface User {
   id: string;
@@ -12,7 +12,8 @@ interface User {
   email: string;
   role: 'admin' | 'hrd' | 'cs';
   branch_id: string | null;
-  faktor_pengali: string;
+  is_active: number; // 1=active, 0=resigned
+  resign_date: string | null;
   created_at: string;
 }
 
@@ -27,14 +28,17 @@ export function Users() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  // Resign modal state
+  const [resignTarget, setResignTarget] = useState<User | null>(null);
+  const [resignDate, setResignDate] = useState('');
+  const [resignSubmitting, setResignSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
     username: '',
     email: '',
     password: '',
     role: 'cs' as 'admin' | 'hrd' | 'cs',
-    branchId: '',
-    faktorPengali: '1.0'
+    branchId: ''
   });
 
   useEffect(() => {
@@ -64,8 +68,7 @@ export function Users() {
       email: '',
       password: '',
       role: 'cs',
-      branchId: '',
-      faktorPengali: '1.0'
+      branchId: ''
     });
     setIsModalOpen(true);
   };
@@ -78,38 +81,83 @@ export function Users() {
       email: user.email,
       password: '', // Leave empty unless changing
       role: user.role,
-      branchId: user.branch_id || '',
-      faktorPengali: user.faktor_pengali
+      branchId: user.branch_id || ''
     });
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.nama.trim()) return alert('Nama Lengkap wajib diisi');
+    if (!formData.username.trim()) return alert('Username wajib diisi');
+    if (!formData.email.trim()) return alert('Email wajib diisi');
+
     try {
+      const payload = {
+        ...formData,
+        branchId: formData.branchId || null
+      };
+
       if (editingUser) {
-        await api.put(`/auth/users/${editingUser.id}`, formData);
+        await api.put(`/auth/users/${editingUser.id}`, payload);
+        alert('Data pengguna berhasil diperbarui');
       } else {
         if (!formData.password) {
           alert('Password wajib diisi untuk pengguna baru');
           return;
         }
-        await api.post('/auth/users', formData);
+        await api.post('/auth/users', payload);
+        alert('Pengguna baru berhasil ditambahkan');
       }
       setIsModalOpen(false);
       fetchData();
-    } catch (err) {
-      alert('Gagal menyimpan data pengguna');
+    } catch (err: any) {
+      console.error('Frontend handleSave error:', err);
+      alert(`Gagal menyimpan data pengguna!
+Detail: ${err.message || 'Terjadi kesalahan sistem'}
+Status: ${err.status || 'N/A'}`);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) return;
+    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini? Data akan hilang permanen.')) return;
     try {
       await api.delete(`/auth/users/${id}`);
+      alert('Pengguna berhasil dihapus');
       fetchData();
-    } catch (err) {
-      alert('Gagal menghapus pengguna');
+    } catch (err: any) {
+      alert(`Gagal menghapus pengguna: ${err.message || 'Terjadi kesalahan sistem'}`);
+    }
+  };
+
+  const openResignModal = (u: User) => {
+    setResignTarget(u);
+    // Default to today
+    setResignDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleResign = async () => {
+    if (!resignTarget || !resignDate) return;
+    setResignSubmitting(true);
+    try {
+      await api.post(`/auth/users/${resignTarget.id}/resign`, { resign_date: resignDate });
+      alert(`${resignTarget.nama} berhasil dinonaktifkan per ${resignDate}`);
+      setResignTarget(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Gagal: ' + err.message);
+    } finally { setResignSubmitting(false); }
+  };
+
+  const handleReactivate = async (u: User) => {
+    if (!confirm(`Aktifkan kembali akun ${u.nama}?`)) return;
+    try {
+      await api.post(`/auth/users/${u.id}/reactivate`, {});
+      alert(`${u.nama} berhasil diaktifkan kembali`);
+      fetchData();
+    } catch (err: any) {
+      alert('Gagal: ' + err.message);
     }
   };
 
@@ -185,12 +233,12 @@ export function Users() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1.5 items-start">
-                        {getRoleBadge(u.role)}
-                        <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
-                          x{u.faktor_pengali}
+                      {getRoleBadge(u.role)}
+                      {u.is_active === 0 && (
+                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                          <UserX className="w-2.5 h-2.5" /> Nonaktif
                         </span>
-                      </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1.5">
@@ -205,7 +253,7 @@ export function Users() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => openEditModal(u)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -213,10 +261,27 @@ export function Users() {
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
+                        {u.is_active !== 0 ? (
+                          <button
+                            onClick={() => openResignModal(u)}
+                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded-lg transition-colors"
+                            title="Nonaktifkan (Resign)"
+                          >
+                            <UserX className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleReactivate(u)}
+                            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-lg transition-colors"
+                            title="Aktifkan Kembali"
+                          >
+                            <UserCheck className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(u.id)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Hapus User"
+                          title="Hapus Permanen"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -234,8 +299,26 @@ export function Users() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingUser ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold hover:bg-gray-200 transition-all active:scale-95"
+            >
+              Batal
+            </button>
+            <button
+              form="user-form"
+              type="submit"
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+            >
+              Simpan Data
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form id="user-form" onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4" noValidate>
           <div className="sm:col-span-2">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Nama Lengkap</label>
             <div className="relative">
@@ -332,35 +415,59 @@ export function Users() {
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Faktor Pengali Komisi</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={formData.faktorPengali}
-              onChange={(e) => setFormData({ ...formData, faktorPengali: e.target.value })}
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-              placeholder="1.0"
-            />
+          <div className="sm:col-span-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">
+            <span className="font-bold">ℹ️ Catatan:</span> Faktor komisi CS dikelola melalui halaman <strong>Penugasan</strong>, bukan dari sini.
           </div>
+        </form>
+      </Modal>
 
-          <div className="sm:col-span-2 pt-4 flex gap-3">
+      {/* ── Resign Confirmation Modal ─────────────────────── */}
+      <Modal
+        isOpen={!!resignTarget}
+        onClose={() => setResignTarget(null)}
+        title="Nonaktifkan Pengguna (Resign)"
+        footer={
+          <div className="flex gap-3">
             <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold hover:bg-gray-200 transition-all active:scale-95"
+              onClick={() => setResignTarget(null)}
+              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold hover:bg-gray-200 transition-all"
             >
               Batal
             </button>
             <button
-              type="submit"
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+              onClick={handleResign}
+              disabled={resignSubmitting || !resignDate}
+              className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold disabled:opacity-50 transition-all shadow-md active:scale-95"
             >
-              Simpan Data
+              {resignSubmitting ? 'Memproses...' : 'Konfirmasi Nonaktifkan'}
             </button>
           </div>
-        </form>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl">
+            <UserX className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-orange-700 dark:text-orange-400">
+              <p className="font-black mb-1">{resignTarget?.nama}</p>
+              <ul className="text-xs space-y-1 list-disc list-inside text-orange-600 dark:text-orange-500">
+                <li>Login akan diblokir mulai hari ini</li>
+                <li>Penugasan aktif akan ditutup per tanggal resign</li>
+                <li>Histori komisi & mutasi tetap tersimpan</li>
+                <li>Rekalkulasi tidak akan menghitung komisi setelah tanggal resign</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Tanggal Resign</label>
+            <input
+              type="date"
+              value={resignDate}
+              onChange={e => setResignDate(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none dark:text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">Komisi setelah tanggal ini tidak akan dihitung untuk user ini.</p>
+          </div>
+        </div>
       </Modal>
     </div>
   );

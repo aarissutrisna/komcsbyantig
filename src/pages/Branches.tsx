@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building2, MapPin, Target, Database, Plus, Pencil, Trash2, Globe } from 'lucide-react';
+import { Building2, MapPin, Target, Database, Plus, Pencil, Trash2, Globe, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 
 interface Branch {
@@ -12,7 +12,10 @@ interface Branch {
   city: string;
   target_min: string;
   target_max: string;
+  comm_perc_min: string;
+  comm_perc_max: string;
   n8n_endpoint: string | null;
+  n8n_secret: string | null;
   last_sync_at: string | null;
 }
 
@@ -22,11 +25,15 @@ export function Branches() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [formData, setFormData] = useState({
+    id: '',
     name: '',
     city: '',
     target_min: '5000000',
     target_max: '10000000',
-    n8n_endpoint: ''
+    comm_perc_min: '0.2',
+    comm_perc_max: '0.4',
+    n8n_endpoint: '',
+    n8n_secret: ''
   });
 
   useEffect(() => {
@@ -47,11 +54,15 @@ export function Branches() {
   const openAddModal = () => {
     setEditingBranch(null);
     setFormData({
+      id: '',
       name: '',
       city: '',
       target_min: '5000000',
       target_max: '10000000',
-      n8n_endpoint: ''
+      comm_perc_min: '0.2',
+      comm_perc_max: '0.4',
+      n8n_endpoint: '',
+      n8n_secret: ''
     });
     setIsModalOpen(true);
   };
@@ -59,27 +70,40 @@ export function Branches() {
   const openEditModal = (branch: Branch) => {
     setEditingBranch(branch);
     setFormData({
+      id: branch.id,
       name: branch.name,
       city: branch.city,
       target_min: branch.target_min,
       target_max: branch.target_max,
-      n8n_endpoint: branch.n8n_endpoint || ''
+      comm_perc_min: branch.comm_perc_min || '0.2',
+      comm_perc_max: branch.comm_perc_max || '0.4',
+      n8n_endpoint: branch.n8n_endpoint || '',
+      n8n_secret: branch.n8n_secret || ''
     });
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.id.trim()) return alert('Kode Cabang (ID) wajib diisi');
+    if (!formData.name.trim()) return alert('Nama Cabang wajib diisi');
+    if (!formData.city.trim()) return alert('Kota wajib diisi');
+    if (!formData.target_min || formData.target_min.toString().trim() === '') return alert('Target Min wajib diisi');
+    if (!formData.target_max || formData.target_max.toString().trim() === '') return alert('Target Max wajib diisi');
+
     try {
       if (editingBranch) {
         await api.put(`/branches/${editingBranch.id}`, formData);
+        alert('Data cabang berhasil diperbarui');
       } else {
         await api.post('/branches', formData);
+        alert('Cabang baru berhasil ditambahkan');
       }
       setIsModalOpen(false);
       fetchBranches();
-    } catch (err) {
-      alert('Gagal menyimpan data cabang');
+    } catch (err: any) {
+      alert(`Gagal menyimpan data cabang: ${err.message || 'Terjadi kesalahan sistem'}`);
     }
   };
 
@@ -187,6 +211,16 @@ export function Branches() {
                     </span>
                   </div>
 
+                  <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-800/50 pt-3">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <TrendingUp className="w-3 h-3 text-emerald-500" />
+                      Komisi (Min - Max)
+                    </div>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      {branch.comm_perc_min}% - {branch.comm_perc_max}%
+                    </span>
+                  </div>
+
                   {branch.n8n_endpoint && (
                     <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 text-[10px] text-gray-500 truncate">
                       <Globe className="w-3 h-3 flex-shrink-0 text-blue-400" />
@@ -196,7 +230,7 @@ export function Branches() {
                 </div>
 
                 <div className="mt-6 flex items-center justify-between text-[10px] text-gray-400">
-                  <span>ID: {branch.id.slice(0, 8)}...</span>
+                  <span className="font-bold text-blue-500 uppercase">ID: {branch.id}</span>
                   <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded italic">
                     Sync: {branch.last_sync_at ? new Date(branch.last_sync_at).toLocaleDateString() : 'Never'}
                   </span>
@@ -211,8 +245,38 @@ export function Branches() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingBranch ? 'Edit Cabang' : 'Tambah Cabang Baru'}
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold hover:bg-gray-200 transition-all active:scale-95"
+            >
+              Batal
+            </button>
+            <button
+              form="branch-form"
+              type="submit"
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+            >
+              Simpan
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleSave} className="space-y-4">
+        <form id="branch-form" onSubmit={handleSave} className="space-y-4" noValidate>
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Kode Cabang (ID)</label>
+            <input
+              type="text"
+              required
+              disabled={!!editingBranch}
+              value={formData.id}
+              onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })}
+              className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white ${editingBranch ? 'opacity-50 cursor-not-allowed' : ''}`}
+              placeholder="Contoh: UTM, JTW, TSM"
+            />
+          </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Nama Cabang</label>
             <input
@@ -257,6 +321,33 @@ export function Branches() {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 text-emerald-600 dark:text-emerald-400">Komisi Min (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.comm_perc_min}
+                onChange={(e) => setFormData({ ...formData, comm_perc_min: e.target.value })}
+                className="w-full px-4 py-2.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all dark:text-white"
+                placeholder="Misal: 0.2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 text-emerald-600 dark:text-emerald-400">Komisi Max (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.comm_perc_max}
+                onChange={(e) => setFormData({ ...formData, comm_perc_max: e.target.value })}
+                className="w-full px-4 py-2.5 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all dark:text-white"
+                placeholder="Misal: 0.4"
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">n8n Webhook URL</label>
             <input
@@ -267,20 +358,15 @@ export function Branches() {
               placeholder="https://primary-production.up.railway.app/webhook/..."
             />
           </div>
-          <div className="pt-4 flex gap-3">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold hover:bg-gray-200 transition-all active:scale-95"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-            >
-              Simpan
-            </button>
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">N8N Webhook Secret (Opsional)</label>
+            <input
+              type="text"
+              value={formData.n8n_secret}
+              onChange={(e) => setFormData({ ...formData, n8n_secret: e.target.value })}
+              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+              placeholder="Kosongkan untuk pakai rahasia Global (.env)"
+            />
           </div>
         </form>
       </Modal>

@@ -12,20 +12,20 @@ export const getBranchById = async (id) => {
 };
 
 export const createBranch = async (branchData) => {
-    const { name, city, target_min, target_max, n8n_endpoint } = branchData;
-    const id = uuidv4();
+    const { id, name, city, target_min, target_max, n8n_endpoint, n8n_secret, comm_perc_min, comm_perc_max } = branchData;
+    const branchId = id || uuidv4();
     await pool.execute(
-        'INSERT INTO branches (id, name, city, target_min, target_max, n8n_endpoint) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, name, city, target_min, target_max, n8n_endpoint]
+        'INSERT INTO branches (id, name, city, target_min, target_max, n8n_endpoint, n8n_secret, comm_perc_min, comm_perc_max) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [branchId, name, city, target_min, target_max, n8n_endpoint, n8n_secret || null, comm_perc_min || 0.20, comm_perc_max || 0.40]
     );
-    return getBranchById(id);
+    return getBranchById(branchId);
 };
 
 export const updateBranch = async (id, branchData) => {
-    const { name, city, target_min, target_max, n8n_endpoint } = branchData;
+    const { name, city, target_min, target_max, n8n_endpoint, n8n_secret, comm_perc_min, comm_perc_max } = branchData;
     await pool.execute(
-        'UPDATE branches SET name = ?, city = ?, target_min = ?, target_max = ?, n8n_endpoint = ? WHERE id = ?',
-        [name, city, target_min, target_max, n8n_endpoint, id]
+        'UPDATE branches SET name = ?, city = ?, target_min = ?, target_max = ?, n8n_endpoint = ?, n8n_secret = ?, comm_perc_min = ?, comm_perc_max = ? WHERE id = ?',
+        [name, city, target_min, target_max, n8n_endpoint, n8n_secret || null, comm_perc_min, comm_perc_max, id]
     );
     return getBranchById(id);
 };

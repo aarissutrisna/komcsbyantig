@@ -13,7 +13,7 @@ interface Profile {
 interface AuthContextType {
   user: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
 }
@@ -46,10 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     // Normal Login
     const { token, user: userData } = await api.post<{ token: string, user: Profile }>('/auth/login', {
-      email,
+      username,
       password,
     });
 
