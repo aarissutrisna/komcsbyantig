@@ -1,6 +1,6 @@
+import './config/env.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import commissionsRoutes from './routes/commissionsRoutes.js';
 import omzetRoutes from './routes/omzetRoutes.js';
@@ -12,8 +12,6 @@ import mutasiRoutes from './routes/mutasiRoutes.js';
 import penugasanRoutes from './routes/penugasanRoutes.js';
 import stableRoutes from './routes/stableRoutes.js';
 import * as schedulerService from './services/schedulerService.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
