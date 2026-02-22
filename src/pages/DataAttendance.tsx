@@ -201,7 +201,8 @@ export function DataAttendance() {
 
   const handleUpdateKehadiran = async (recordId: string, value: number) => {
     try {
-      await api.post('/omzet/update-kehadiran', { id: recordId, kehadiran: value });
+      if (selectedUser === 'all') throw new Error('Pilih karyawan spesifik terlebih dahulu');
+      await api.post('/omzet/update-kehadiran', { id: recordId, kehadiran: value, userId: selectedUser });
       fetchOmzet();
     } catch (err: any) {
       alert('Gagal update kehadiran: ' + err.message);

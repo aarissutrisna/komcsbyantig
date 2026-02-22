@@ -178,7 +178,7 @@ export const getByUser = async (req, res) => {
 
 export const updateKehadiran = async (req, res) => {
   try {
-    const { id, kehadiran } = req.body;
+    const { id, kehadiran, userId } = req.body;
     if (!id || kehadiran === undefined) return res.status(400).json({ error: 'id and kehadiran required' });
 
     // Role check: CS cannot edit
@@ -186,7 +186,9 @@ export const updateKehadiran = async (req, res) => {
       return res.status(403).json({ error: 'Forbidden: CS cannot edit attendance' });
     }
 
-    await omzetService.updateKehadiran(req.user.id, id, kehadiran);
+    const targetUserId = userId || req.user.id;
+
+    await omzetService.updateKehadiran(targetUserId, id, kehadiran);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

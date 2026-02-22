@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS branches (
   last_sync_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS users (
   id CHAR(36) PRIMARY KEY,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS omzet (
   id CHAR(36) PRIMARY KEY,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
   setting_key VARCHAR(255) UNIQUE NOT NULL,
   setting_value TEXT,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS omzetbulanan (
   id CHAR(36) PRIMARY KEY,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS omzetbulanan (
   CONSTRAINT fk_ob_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
   CONSTRAINT fk_ob_user FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
   UNIQUE KEY uk_branch_month_year (branch_id, month, year)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS commissions (
   id CHAR(36) PRIMARY KEY,
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS commissions (
 CREATE TABLE IF NOT EXISTS user_cabang_history (
   id CHAR(36) PRIMARY KEY,
   user_id CHAR(36) NOT NULL,
-  cabang_id VARCHAR(10) NOT NULL,
+  cabang_id CHAR(36) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE DEFAULT NULL,
   created_by CHAR(36) DEFAULT NULL,
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS user_cabang_history (
 -- Alokasi porsi komisi user di cabang pada periode tertentu
 CREATE TABLE IF NOT EXISTS cabang_user_allocation (
   id CHAR(36) PRIMARY KEY,
-  cabang_id VARCHAR(10) NOT NULL,
+  cabang_id CHAR(36) NOT NULL,
   user_id CHAR(36) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE DEFAULT NULL,
