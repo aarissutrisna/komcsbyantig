@@ -63,7 +63,7 @@ export const runDailyAutoFetch = async () => {
                     // Insert with AUTO source and is_final = true
                     await pool.execute(
                         `INSERT INTO omzet (id, user_id, branch_id, cash, bayar_piutang, total, date, description, source, is_final, last_synced_at)
-             VALUES (UUID(), 'SYSTEM', ?, ?, ?, ?, ?, 'AUTO', TRUE, CURRENT_TIMESTAMP)
+             VALUES (UUID(), NULL, ?, ?, ?, ?, ?, ?, 'AUTO', TRUE, CURRENT_TIMESTAMP)
              ON DUPLICATE KEY UPDATE 
                cash = VALUES(cash), 
                bayar_piutang = VALUES(bayar_piutang), 
