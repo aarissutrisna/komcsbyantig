@@ -33,7 +33,7 @@ export const loginUser = async (username, password) => {
       branchId: user.branch_id
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRY }
+    { expiresIn: process.env.JWT_EXPIRY || process.env.JWT_EXPIRES_IN || '12h' }
   );
 
   return {

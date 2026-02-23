@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('admin', 'hrd', 'cs') NOT NULL,
   branch_id CHAR(36),
   faktor_pengali DECIMAL(5, 2) DEFAULT 1.00,
+  is_active BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
