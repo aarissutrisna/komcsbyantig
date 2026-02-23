@@ -1,5 +1,10 @@
 import './config/env.js';
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import commissionsRoutes from './routes/commissionsRoutes.js';
@@ -40,6 +45,15 @@ app.use('/api/targets', targetRoutes);
 app.use('/api/mutasi', mutasiRoutes);
 app.use('/api/penugasan', penugasanRoutes);
 app.use('/api/stable', stableRoutes);
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../../dist')));
+
+// Catch-all route for SPA handling
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path === '/health') return next();
+  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
