@@ -1,11 +1,9 @@
 import './config/env.js';
 import express from 'express';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import commissionsRoutes from './routes/commissionsRoutes.js';
 import omzetRoutes from './routes/omzetRoutes.js';
@@ -17,6 +15,9 @@ import mutasiRoutes from './routes/mutasiRoutes.js';
 import penugasanRoutes from './routes/penugasanRoutes.js';
 import stableRoutes from './routes/stableRoutes.js';
 import * as schedulerService from './services/schedulerService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
@@ -45,9 +49,6 @@ app.use('/api/targets', targetRoutes);
 app.use('/api/mutasi', mutasiRoutes);
 app.use('/api/penugasan', penugasanRoutes);
 app.use('/api/stable', stableRoutes);
-
-// Serve frontend static files
-app.use(express.static(path.join(__dirname, '../../dist')));
 
 // Catch-all route for SPA handling
 app.get('*', (req, res, next) => {
