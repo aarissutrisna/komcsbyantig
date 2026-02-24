@@ -65,6 +65,10 @@ Tabel hasil akhir (Read-Heavy). Data ini selalu bisa di-destroy dan dibangun ula
 - `snapshot_meta` (JSON)
 - `period_start` (DATE) & `period_end` (DATE)
 
-## 2. Integrity & Constraint Hardening
-- Seluruh Foreign Key dilengkapi `ON DELETE CASCADE` / `RESTRICT` tergantung signifikansinya.
-- Index telah dipasang pada `tanggal_mulai` dan `tanggal_selesai` untuk `cs_penugasan` agar hitungan Query `FOR UPDATE` saat transaksi kilat.
+## 3. Protokol Pemeliharaan (AI Maintenance Protocol)
+
+Setiap ada perubahan struktur database (Tambah/Ulang/Hapus), protokol berikut **Wajib** dijalankan oleh Agent/Developer:
+
+1. **SQL Commands**: Perintah SQL migrasi (`ALTER`, `CREATE`, dsb) harus dicatat dalam riwayat perbaikan (file `update.md`).
+2. **Schema Update**: File `schema_mariadb.sql` pada root project harus diperbarui agar mencerminkan struktur terbaru secara otomatis (digunakan untuk *fresh install*).
+3. **Deployment Hook**: Jika ada perubahan DB, pastikan `--UPDATE_HOOK` di `update.md` memberi tahu skrip VM jika diperlukan penanganan khusus.
