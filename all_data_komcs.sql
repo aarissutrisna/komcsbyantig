@@ -1,8 +1,26 @@
--- Generated Schema Dump
+-- --------------------------------------------------------
+-- Host:                         127.0.0.1
+-- Server version:               11.4.10-MariaDB - MariaDB Server
+-- Server OS:                    Win64
+-- HeidiSQL Version:             12.14.0.7165
+-- --------------------------------------------------------
 
--- Table: attendance_data
-DROP TABLE IF EXISTS `attendance_data`;
-CREATE TABLE `attendance_data` (
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+
+-- Dumping database structure for cs_commission
+CREATE DATABASE IF NOT EXISTS `cs_commission` /*!40100 DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci */;
+USE `cs_commission`;
+
+-- Dumping structure for table cs_commission.attendance_data
+CREATE TABLE IF NOT EXISTS `attendance_data` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `branch_id` char(36) NOT NULL,
@@ -16,9 +34,10 @@ CREATE TABLE `attendance_data` (
   UNIQUE KEY `uk_attendance_user_branch_date` (`user_id`,`branch_id`,`tanggal`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: audit_logs
-DROP TABLE IF EXISTS `audit_logs`;
-CREATE TABLE `audit_logs` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.audit_logs
+CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` char(36) NOT NULL,
   `user_id` char(36) DEFAULT NULL,
   `action` varchar(255) NOT NULL,
@@ -32,9 +51,10 @@ CREATE TABLE `audit_logs` (
   CONSTRAINT `fk_audit_user_log` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: branches
-DROP TABLE IF EXISTS `branches`;
-CREATE TABLE `branches` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.branches
+CREATE TABLE IF NOT EXISTS `branches` (
   `id` varchar(10) NOT NULL,
   `name` varchar(255) NOT NULL,
   `city` varchar(255) DEFAULT NULL,
@@ -51,9 +71,10 @@ CREATE TABLE `branches` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: commission_mutations
-DROP TABLE IF EXISTS `commission_mutations`;
-CREATE TABLE `commission_mutations` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.commission_mutations
+CREATE TABLE IF NOT EXISTS `commission_mutations` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `branch_id` varchar(10) DEFAULT NULL,
@@ -71,9 +92,10 @@ CREATE TABLE `commission_mutations` (
   CONSTRAINT `fk_mut_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: commissions
-DROP TABLE IF EXISTS `commissions`;
-CREATE TABLE `commissions` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.commissions
+CREATE TABLE IF NOT EXISTS `commissions` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `branch_id` varchar(10) DEFAULT NULL,
@@ -98,9 +120,10 @@ CREATE TABLE `commissions` (
   CONSTRAINT `fk_comm_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: cs_penugasan
-DROP TABLE IF EXISTS `cs_penugasan`;
-CREATE TABLE `cs_penugasan` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.cs_penugasan
+CREATE TABLE IF NOT EXISTS `cs_penugasan` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `cabang_id` varchar(10) NOT NULL,
@@ -118,9 +141,10 @@ CREATE TABLE `cs_penugasan` (
   CONSTRAINT `chk_faktor_komisi` CHECK (`faktor_komisi` > 0 and `faktor_komisi` <= 1.00)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: n8n_live_cache
-DROP TABLE IF EXISTS `n8n_live_cache`;
-CREATE TABLE `n8n_live_cache` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.n8n_live_cache
+CREATE TABLE IF NOT EXISTS `n8n_live_cache` (
   `branch_id` varchar(10) NOT NULL,
   `tanggal` date NOT NULL,
   `cash` decimal(15,2) DEFAULT 0.00,
@@ -130,9 +154,10 @@ CREATE TABLE `n8n_live_cache` (
   PRIMARY KEY (`branch_id`,`tanggal`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: omzet
-DROP TABLE IF EXISTS `omzet`;
-CREATE TABLE `omzet` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.omzet
+CREATE TABLE IF NOT EXISTS `omzet` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `branch_id` varchar(10) DEFAULT NULL,
@@ -157,9 +182,10 @@ CREATE TABLE `omzet` (
   CONSTRAINT `fk_omzet_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: omzetbulanan
-DROP TABLE IF EXISTS `omzetbulanan`;
-CREATE TABLE `omzetbulanan` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.omzetbulanan
+CREATE TABLE IF NOT EXISTS `omzetbulanan` (
   `id` char(36) NOT NULL,
   `branch_id` char(36) NOT NULL,
   `month` tinyint(4) NOT NULL,
@@ -177,9 +203,10 @@ CREATE TABLE `omzetbulanan` (
   CONSTRAINT `fk_ob_user` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: system_settings
-DROP TABLE IF EXISTS `system_settings`;
-CREATE TABLE `system_settings` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.system_settings
+CREATE TABLE IF NOT EXISTS `system_settings` (
   `id` char(36) NOT NULL,
   `setting_key` varchar(255) NOT NULL,
   `setting_value` text DEFAULT NULL,
@@ -188,9 +215,10 @@ CREATE TABLE `system_settings` (
   UNIQUE KEY `setting_key` (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: users
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE `users` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.users
+CREATE TABLE IF NOT EXISTS `users` (
   `id` char(36) NOT NULL,
   `username` varchar(255) NOT NULL,
   `nama` varchar(255) NOT NULL,
@@ -211,9 +239,10 @@ CREATE TABLE `users` (
   CONSTRAINT `fk_user_branch` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
--- Table: withdrawal_requests
-DROP TABLE IF EXISTS `withdrawal_requests`;
-CREATE TABLE `withdrawal_requests` (
+-- Data exporting was unselected.
+
+-- Dumping structure for table cs_commission.withdrawal_requests
+CREATE TABLE IF NOT EXISTS `withdrawal_requests` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `branch_id` varchar(10) DEFAULT NULL,
@@ -229,14 +258,24 @@ CREATE TABLE `withdrawal_requests` (
   KEY `fk_wd_user` (`user_id`),
   KEY `fk_wd_branch` (`branch_id`),
   CONSTRAINT `fk_wd_branch` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_wd_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT \`fk_wd_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
+-- Data exporting was unselected.
 
--- Initial Data
-INSERT INTO branches (id, name, city) VALUES
-  ('UTM', 'Puncak Jaya Baja UTM', 'Puncak Jaya Baja UTM'),
-  ('JTJ', 'Puncak Jaya Baja JTJ', 'Puncak Jaya Baja JTJ'),
-  ('TSM', 'Puncak Jaya Baja TSM', 'Puncak Jaya Baja TSM')
-ON DUPLICATE KEY UPDATE name = VALUES(name), city = VALUES(city);
+-- Dumping structure for table cs_commission.n8n_live_cache
+CREATE TABLE IF NOT EXISTS \`n8n_live_cache\` (
+  \`branch_id\` varchar(10) NOT NULL,
+  \`tanggal\` date NOT NULL,
+  \`cash\` decimal(15,2) DEFAULT 0.00,
+  \`piutang\` decimal(15,2) DEFAULT 0.00,
+  \`total\` decimal(15,2) DEFAULT 0.00,
+  \`last_fetched_at\` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (\`branch_id\`,\`tanggal\`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
+/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
+/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
+/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;

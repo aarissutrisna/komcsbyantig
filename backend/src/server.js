@@ -1,8 +1,8 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import './config/env.js';
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/authRoutes.js';
 import commissionsRoutes from './routes/commissionsRoutes.js';
