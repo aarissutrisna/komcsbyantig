@@ -614,7 +614,8 @@ export function Mutations() {
             const byDate = new Map<string, Record<string, number>>();
             for (const row of dailySummary) {
               if (!byDate.has(row.tanggal)) byDate.set(row.tanggal, {});
-              byDate.get(row.tanggal)![row.metode] = (byDate.get(row.tanggal)![row.metode] || 0) + row.total;
+              const val = Number(row.total || 0);
+              byDate.get(row.tanggal)![row.metode] = (byDate.get(row.tanggal)![row.metode] || 0) + val;
             }
             // sort by date desc
             const dates = [...byDate.keys()].sort((a, b) => b.localeCompare(a));
