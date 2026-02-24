@@ -525,11 +525,11 @@ export function DataAttendance() {
                     {selectedUser !== 'all' && (
                       <td className="px-6 py-4 text-center">
                         <select
-                          value={record.kehadiran}
+                          value={Number(record.kehadiran)}
                           onChange={(e) => handleUpdateKehadiran(record.id, parseFloat(e.target.value))}
                           disabled={isCS}
-                          className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border transition-all ${record.kehadiran === 1 ? 'bg-green-50 text-green-700 border-green-200' :
-                            record.kehadiran === 0.5 ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                          className={`text-xs font-bold rounded-lg px-2 py-1 outline-none border transition-all ${Number(record.kehadiran) === 1 ? 'bg-green-50 text-green-700 border-green-200' :
+                            Number(record.kehadiran) === 0.5 ? 'bg-orange-50 text-orange-700 border-orange-200' :
                               'bg-red-50 text-red-700 border-red-200'
                             } disabled:opacity-100 appearance-none text-center cursor-pointer`}
                         >
