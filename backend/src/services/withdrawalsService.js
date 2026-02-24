@@ -217,16 +217,25 @@ export const getDailyMutationSummary = async (filters = {}) => {
 
     const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
 
-    const KNOWN = `'kas_utm','kas_jtj','kas_tsm','transfer_bca','transfer_bri','transfer_mandiri','transfer_bni','emoney'`;
+    const KNOWN_TRANSFERS = `'transfer_bca','transfer_bri','transfer_mandiri','transfer_bni','emoney'`;
 
     const query = `
       SELECT
         tanggal,
-        CASE WHEN metode IN (${KNOWN}) THEN metode ELSE 'lainnya' END as metode,
+        CASE 
+          WHEN metode LIKE 'kas_%' THEN metode
+          WHEN metode IN (${KNOWN_TRANSFERS}) THEN metode 
+          ELSE 'lainnya' 
+        END as metode,
         SUM(nominal) as total
       FROM commission_mutations
       ${where}
-      GROUP BY tanggal, CASE WHEN metode IN (${KNOWN}) THEN metode ELSE 'lainnya' END
+      GROUP BY tanggal, 
+               CASE 
+                 WHEN metode LIKE 'kas_%' THEN metode
+                 WHEN metode IN (${KNOWN_TRANSFERS}) THEN metode 
+                 ELSE 'lainnya' 
+               END
       ORDER BY tanggal DESC, metode ASC
     `;
 

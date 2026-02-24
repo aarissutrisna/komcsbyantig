@@ -257,7 +257,7 @@ export function Mutations() {
         alert('Kas keluar berhasil dicatat!');
       }
       setShowManualModal(false); setEditingMutation(null);
-      setManualForm({ userId: '', nominal: '', metode: 'kas_cabang', keterangan: '', tipe: 'keluar', tanggal: todayStr() });
+      setManualForm({ userId: '', nominal: '', metode: METODE_OPTIONS[0].value, keterangan: '', tipe: 'keluar', tanggal: todayStr() });
       fetchData();
     } catch (err: any) { alert('Gagal: ' + err.message); }
     finally { setSubmitting(false); }
@@ -274,7 +274,7 @@ export function Mutations() {
   const openEditMutation = (mut: MutationRow) => {
     setEditingMutation(mut);
     setManualForm({
-      userId: mut.user_id, nominal: String(mut.nominal), metode: mut.metode || 'kas_cabang',
+      userId: mut.user_id, nominal: String(mut.nominal), metode: mut.metode || METODE_OPTIONS[0].value,
       keterangan: mut.keterangan, tipe: mut.tipe, tanggal: mut.tanggal?.slice(0, 10) || todayStr(),
     });
     setShowManualModal(true);
@@ -306,7 +306,7 @@ export function Mutations() {
           )}
           {canManage && viewMode === 'user-ledger' && (
             <button
-              onClick={() => { setEditingMutation(null); setManualForm({ userId: filters.userId, nominal: '', metode: 'kas_cabang', keterangan: '', tipe: 'keluar', tanggal: todayStr() }); setShowManualModal(true); }}
+              onClick={() => { setEditingMutation(null); setManualForm({ userId: filters.userId, nominal: '', metode: METODE_OPTIONS[0].value, keterangan: '', tipe: 'keluar', tanggal: todayStr() }); setShowManualModal(true); }}
               className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all"
             >
               <Plus className="w-4 h-4" /> Kas Keluar
