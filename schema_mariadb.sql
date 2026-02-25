@@ -201,6 +201,7 @@ CREATE TABLE `users` (
   `resign_date` date DEFAULT NULL,
   `branch_id` varchar(10) DEFAULT NULL,
   `faktor_pengali` decimal(5,2) DEFAULT 1.00,
+  `saldo_awal` decimal(15,2) DEFAULT 0.00,
   `created_at` datetime DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),

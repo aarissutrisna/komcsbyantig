@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building, Mail, Database, Plus, Pencil, Trash2, Key, Shield, User as UserIcon, UserX, UserCheck } from 'lucide-react';
+import { Building, Mail, Database, Plus, Pencil, Key, Shield, User as UserIcon, UserX, UserCheck } from 'lucide-react';
 
 interface User {
   id: string;
@@ -14,6 +14,7 @@ interface User {
   branch_id: string | null;
   is_active: number; // 1=active, 0=resigned
   resign_date: string | null;
+  saldo_awal: number;
   created_at: string;
 }
 
@@ -38,7 +39,8 @@ export function Users() {
     email: '',
     password: '',
     role: 'cs' as 'admin' | 'hrd' | 'cs',
-    branchId: ''
+    branchId: '',
+    saldoAwal: ''
   });
 
   useEffect(() => {
@@ -68,7 +70,8 @@ export function Users() {
       email: '',
       password: '',
       role: 'cs',
-      branchId: ''
+      branchId: '',
+      saldoAwal: ''
     });
     setIsModalOpen(true);
   };
@@ -81,7 +84,8 @@ export function Users() {
       email: user.email,
       password: '', // Leave empty unless changing
       role: user.role,
-      branchId: user.branch_id || ''
+      branchId: user.branch_id || '',
+      saldoAwal: user.saldo_awal?.toString() || '0'
     });
     setIsModalOpen(true);
   };
@@ -96,7 +100,8 @@ export function Users() {
     try {
       const payload = {
         ...formData,
-        branchId: formData.branchId || null
+        branchId: formData.branchId || null,
+        saldoAwal: parseFloat(formData.saldoAwal || '0')
       };
 
       if (editingUser) {
@@ -120,16 +125,6 @@ Status: ${err.status || 'N/A'}`);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini? Data akan hilang permanen.')) return;
-    try {
-      await api.delete(`/auth/users/${id}`);
-      alert('Pengguna berhasil dihapus');
-      fetchData();
-    } catch (err: any) {
-      alert(`Gagal menghapus pengguna: ${err.message || 'Terjadi kesalahan sistem'}`);
-    }
-  };
 
   const openResignModal = (u: User) => {
     setResignTarget(u);
@@ -278,13 +273,6 @@ Status: ${err.status || 'N/A'}`);
                             <UserCheck className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                          title="Hapus Permanen"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -413,6 +401,21 @@ Status: ${err.status || 'N/A'}`);
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Saldo Awal (Rp)</label>
+            <div className="relative">
+              <Database className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="number"
+                value={formData.saldoAwal}
+                onChange={(e) => setFormData({ ...formData, saldoAwal: e.target.value })}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white font-mono"
+                placeholder="0"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1 italic">* Digunakan untuk migrasi saldo dari sistem lama.</p>
           </div>
 
           <div className="sm:col-span-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-xl text-xs text-yellow-700 dark:text-yellow-400">

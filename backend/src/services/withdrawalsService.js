@@ -254,6 +254,9 @@ export const createManualMutation = async (data) => {
     await connection.beginTransaction();
 
     if (tipe === 'keluar') {
+      const [userRows] = await connection.execute('SELECT saldo_awal FROM users WHERE id = ?', [userId]);
+      const saldoAwal = parseFloat(userRows[0]?.saldo_awal || 0);
+
       const [commRows] = await connection.execute(
         'SELECT SUM(commission_amount) as total FROM commissions WHERE user_id = ?',
         [userId]
@@ -262,11 +265,14 @@ export const createManualMutation = async (data) => {
         `SELECT SUM(CASE WHEN tipe = 'masuk' THEN nominal ELSE -nominal END) as net FROM commission_mutations WHERE user_id = ?`,
         [userId]
       );
-      const balance = parseFloat(commRows[0]?.total || 0) + parseFloat(mutRows[0]?.net || 0);
+      const balance = saldoAwal + parseFloat(commRows[0]?.total || 0) + parseFloat(mutRows[0]?.net || 0);
       if (nominal > balance) throw new Error(`Saldo tidak cukup. Tersedia: ${balance}`);
     }
 
     // Recalculate saldo_setelah
+    const [userRows2] = await connection.execute('SELECT saldo_awal FROM users WHERE id = ?', [userId]);
+    const saldoAwal2 = parseFloat(userRows2[0]?.saldo_awal || 0);
+
     const [balRows] = await connection.execute(
       `SELECT SUM(CASE WHEN tipe = 'masuk' THEN nominal ELSE -nominal END) as net FROM commission_mutations WHERE user_id = ?`,
       [userId]
@@ -275,7 +281,7 @@ export const createManualMutation = async (data) => {
       'SELECT SUM(commission_amount) as total FROM commissions WHERE user_id = ?',
       [userId]
     );
-    const currentBal = parseFloat(commRows2[0]?.total || 0) + parseFloat(balRows[0]?.net || 0);
+    const currentBal = saldoAwal2 + parseFloat(commRows2[0]?.total || 0) + parseFloat(balRows[0]?.net || 0);
     const saldoSetelah = tipe === 'masuk' ? currentBal + parseFloat(nominal) : currentBal - parseFloat(nominal);
 
     const id = uuidv4();
@@ -339,6 +345,9 @@ export const getUserBalance = async (userId, dateFrom, dateTo) => {
     const mutPeriodCond = mutPeriodWhere.length ? `AND ${mutPeriodWhere.join(' AND ')}` : '';
 
     // All-time totals
+    const [userData] = await pool.execute('SELECT saldo_awal FROM users WHERE id = ?', [userId]);
+    const saldoAwal = parseFloat(userData[0]?.saldo_awal || 0);
+
     const [allComm] = await pool.execute(
       'SELECT SUM(commission_amount) as total FROM commissions WHERE user_id = ?', [userId]
     );
@@ -368,9 +377,10 @@ export const getUserBalance = async (userId, dateFrom, dateTo) => {
 
     return {
       // All-time
+      saldoAwal,
       totalCommissions: totalKomisi,
       totalKeluar,
-      availableBalance: totalKomisi + netMutations,
+      availableBalance: saldoAwal + totalKomisi + netMutations,
       // Period (filtered)
       periodCommissions: periodKomisi,
       periodKeluar,

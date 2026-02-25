@@ -51,7 +51,7 @@ export const loginUser = async (username, password) => {
 
 export const getUserProfile = async (userId) => {
   const [rows] = await pool.execute(
-    'SELECT id, username, nama, email, role, branch_id, faktor_pengali, created_at FROM users WHERE id = ?',
+    'SELECT id, username, nama, email, role, branch_id, faktor_pengali, saldo_awal, created_at FROM users WHERE id = ?',
     [userId]
   );
 
@@ -89,7 +89,7 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
 };
 
 export const getAllUsers = async (branchId = null, includeInactive = true) => {
-  let query = 'SELECT DISTINCT u.id, u.username, u.nama, u.email, u.role, u.branch_id, u.faktor_pengali, u.is_active, u.resign_date, u.created_at FROM users u';
+  let query = 'SELECT DISTINCT u.id, u.username, u.nama, u.email, u.role, u.branch_id, u.faktor_pengali, u.saldo_awal, u.is_active, u.resign_date, u.created_at FROM users u';
   const params = [];
   const conds = [];
 
@@ -115,8 +115,8 @@ export const createUser = async (userData) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   await pool.execute(
-    'INSERT INTO users (id, username, nama, email, password, role, branch_id, faktor_pengali) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, username, nama, email, hashedPassword, role, branchId || null, parseFloat(faktorPengali || 1.0)]
+    'INSERT INTO users (id, username, nama, email, password, role, branch_id, faktor_pengali, saldo_awal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, username, nama, email, hashedPassword, role, branchId || null, parseFloat(faktorPengali || 1.0), parseFloat(userData.saldoAwal || 0)]
   );
 
   return getUserProfile(id);
@@ -125,8 +125,8 @@ export const createUser = async (userData) => {
 export const updateUser = async (id, userData) => {
   const { username, nama, email, password, role, branchId, faktorPengali } = userData;
 
-  let query = 'UPDATE users SET username = ?, nama = ?, email = ?, role = ?, branch_id = ?, faktor_pengali = ?';
-  let params = [username, nama, email, role, branchId || null, parseFloat(faktorPengali || 1.0)];
+  let query = 'UPDATE users SET username = ?, nama = ?, email = ?, role = ?, branch_id = ?, faktor_pengali = ?, saldo_awal = ?';
+  let params = [username, nama, email, role, branchId || null, parseFloat(faktorPengali || 1.0), parseFloat(userData.saldoAwal || 0)];
 
   if (password) {
     const hashedPassword = await bcrypt.hash(password, 10);
