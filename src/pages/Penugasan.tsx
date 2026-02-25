@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building, User as UserIcon, Plus, Database, ClipboardList, Trash2, BarChart2, History, ChevronDown } from 'lucide-react';
+import { Building, User as UserIcon, Plus, Database, ClipboardList, Trash2, BarChart2, History } from 'lucide-react';
 
 interface User {
     id: string;
@@ -402,23 +402,23 @@ export function Penugasan() {
                 {/* ── TAB: HISTORI PENUGASAN ─────────────────────────────────────── */}
                 {rekapTab === 'histori' && (
                     <div>
-                        {/* Branch selector */}
-                        <div className="relative mb-4">
-                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            <select
-                                value={histBranch}
-                                onChange={(e) => {
-                                    setHistBranch(e.target.value);
-                                    fetchHistori(e.target.value);
-                                }}
-                                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white appearance-none text-sm font-bold"
-                            >
-                                <option value="">-- Pilih Cabang --</option>
-                                {branches.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                ))}
-                            </select>
+                        {/* Branch tabs for History */}
+                        <div className="flex gap-1 mb-4 border-b border-gray-200 dark:border-gray-700">
+                            {branches.map(b => (
+                                <button
+                                    key={b.id}
+                                    onClick={() => {
+                                        setHistBranch(b.id);
+                                        fetchHistori(b.id);
+                                    }}
+                                    className={`px-4 py-2 text-sm font-bold border-b-2 -mb-px transition-colors ${histBranch === b.id
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                        }`}
+                                >
+                                    {b.name}
+                                </button>
+                            ))}
                         </div>
 
                         {histLoading ? (

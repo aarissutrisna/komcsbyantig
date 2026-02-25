@@ -237,28 +237,33 @@ export const getRekapPenugasanTerakhir = async () => {
 export const getHistoriPenugasanByCabang = async (cabangId) => {
     let sql = `
         SELECT
-          p.id,
-          p.tanggal_mulai,
-          p.faktor_komisi,
-          p.cabang_id,
-          b.name as cabang_name,
-          p.created_at,
-          -- Aggregate all users assigned on the same tanggal_mulai for this branch
-          GROUP_CONCAT(
-            CONCAT(u.nama, ' ', ROUND(p2.faktor_komisi * 100, 0), '%')
-            ORDER BY p2.faktor_komisi DESC
-            SEPARATOR ' - '
+          d.tanggal_mulai,
+          (
+            SELECT GROUP_CONCAT(
+              CONCAT(u.nama, ' ', ROUND(p2.faktor_komisi * 100, 0), '%')
+              ORDER BY p2.faktor_komisi DESC
+              SEPARATOR ' - '
+            )
+            FROM cs_penugasan p2
+            JOIN users u ON u.id = p2.user_id
+            WHERE p2.cabang_id = ?
+              AND p2.tanggal_mulai <= d.tanggal_mulai
+              AND p2.tanggal_mulai = (
+                -- Most recent assignment for this user as of THIS history date
+                SELECT MAX(p3.tanggal_mulai)
+                FROM cs_penugasan p3
+                WHERE p3.user_id = p2.user_id
+                  AND p3.tanggal_mulai <= d.tanggal_mulai
+              )
           ) as pembagian
-        FROM cs_penugasan p
-        JOIN branches b ON b.id = p.cabang_id
-        -- Join to get all penugasan on same date for this branch
-        JOIN cs_penugasan p2 ON p2.cabang_id = p.cabang_id AND p2.tanggal_mulai = p.tanggal_mulai
-        JOIN users u ON u.id = p2.user_id
-        WHERE p.cabang_id = ?
-        GROUP BY p.tanggal_mulai, p.cabang_id
-        ORDER BY p.tanggal_mulai ASC
+        FROM (
+          SELECT DISTINCT tanggal_mulai 
+          FROM cs_penugasan 
+          WHERE cabang_id = ?
+        ) d
+        ORDER BY d.tanggal_mulai ASC
     `;
-    const params = [cabangId];
+    const params = [cabangId, cabangId];
     const [rows] = await pool.execute(sql, params);
     return rows;
 };
