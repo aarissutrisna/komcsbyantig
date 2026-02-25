@@ -219,11 +219,13 @@ export const getRekapPenugasanTerakhir = async () => {
          JOIN users u ON u.id = p.user_id
          JOIN branches b ON b.id = p.cabang_id
          JOIN (
-           -- Latest assignment date for EACH branch
-           SELECT cabang_id, MAX(tanggal_mulai) as max_date
+           -- Latest assignment date for EACH user (Global)
+           -- A user is considered active in only ONE configuration
+           -- which is their most recent assignment.
+           SELECT user_id, MAX(tanggal_mulai) as max_date
            FROM cs_penugasan
-           GROUP BY cabang_id
-         ) latest ON p.cabang_id = latest.cabang_id AND p.tanggal_mulai = latest.max_date
+           GROUP BY user_id
+         ) latest ON p.user_id = latest.user_id AND p.tanggal_mulai = latest.max_date
          WHERE u.role = 'cs'
          ORDER BY p.cabang_id ASC, p.faktor_komisi DESC`
   );
