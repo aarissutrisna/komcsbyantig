@@ -32,29 +32,47 @@ export const scheduleJob = (timeStr) => {
     const [hour, minute] = timeStr.split(':');
     const cronExpr = `${minute} ${hour} * * *`;
 
+    // node-cron 3.0+ supports timezone option
     activeCron = cron.schedule(cronExpr, async () => {
-        console.log(`[Scheduler] Starting daily auto-fetch at ${new Date().toISOString()}`);
-        await runDailyAutoFetch();
+        const jakartaDate = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+
+        console.log(`[Scheduler] Starting daily auto-fetch for Jakarta Date: ${jakartaDate} at ${new Date().toISOString()}`);
+        await runDailyAutoFetch(jakartaDate);
+    }, {
+        scheduled: true,
+        timezone: "Asia/Jakarta"
     });
 
-    console.log(`[Scheduler] Scheduled daily job at ${timeStr}`);
+    console.log(`[Scheduler] Scheduled daily job at ${timeStr} (Asia/Jakarta)`);
 };
 
 /**
  * Run fetch for all active branches
  */
-export const runDailyAutoFetch = async () => {
+export const runDailyAutoFetch = async (targetDate = null) => {
     try {
         const [branches] = await pool.execute('SELECT id, name FROM branches WHERE n8n_endpoint IS NOT NULL AND n8n_endpoint != ""');
-        const today = new Date().toISOString().split('T')[0];
+
+        // If targetDate not provided, default to current Jakarta date
+        const dateToFetch = targetDate || new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
 
         for (const branch of branches) {
             try {
-                console.log(`[Scheduler] Fetching data for ${branch.name}...`);
+                console.log(`[Scheduler] Fetching data for ${branch.name} on date ${dateToFetch}...`);
 
                 // Use OmzetUpdateService logic but with AUTO source
-                const n8nData = await n8nService.fetchFromBranch(branch.id, { startDate: today, endDate: today });
-                const item = n8nData.find(d => n8nService.convertDateFormat(d.tanggal) === today);
+                const n8nData = await n8nService.fetchFromBranch(branch.id, { startDate: dateToFetch, endDate: dateToFetch });
+                const item = n8nData.find(d => n8nService.convertDateFormat(d.tanggal) === dateToFetch);
 
                 if (item) {
                     const total = parseFloat(item.cash || 0) + parseFloat(item.piutang || 0);
@@ -72,7 +90,7 @@ export const runDailyAutoFetch = async () => {
                source = 'AUTO', 
                is_final = TRUE,
                last_synced_at = CURRENT_TIMESTAMP`,
-                        [branch.id, item.cash || 0, item.piutang || 0, total, today, description]
+                        [branch.id, item.cash || 0, item.piutang || 0, total, dateToFetch, description]
                     );
 
                     await auditService.recordLog({
@@ -80,7 +98,7 @@ export const runDailyAutoFetch = async () => {
                         action: 'AUTO_FETCH_DAILY',
                         entity: 'branch',
                         entityId: branch.id,
-                        details: { date: today, branch_name: branch.name, amount: total }
+                        details: { date: dateToFetch, branch_name: branch.name, amount: total }
                     });
                 }
             } catch (err) {

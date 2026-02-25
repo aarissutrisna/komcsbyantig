@@ -47,6 +47,7 @@ interface OmzetRecord {
   username?: string;
   nama?: string;
   branch_id: string;
+  branch_name?: string;
   cash: number;
   bayar_piutang: number;
   total: number;
@@ -540,7 +541,14 @@ export function DataAttendance() {
                       </td>
                     )}
                     <td className="px-6 py-4 text-right">
-                      <span className="text-sm font-black text-green-600 dark:text-green-500">{formatCurrency(record.komisi)}</span>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-sm font-black text-green-600 dark:text-green-500">{formatCurrency(record.komisi)}</span>
+                        {record.branch_name && (
+                          <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">
+                            {record.branch_name}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {(isAdmin || isHRD) && selectedUser !== 'all' && (
                       <td className="px-6 py-4 text-center">

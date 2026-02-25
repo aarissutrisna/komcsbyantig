@@ -65,3 +65,31 @@ export const getMyBranches = async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 };
+
+/**
+ * GET /api/penugasan/rekap
+ * Get current active assignment per user per branch (admin only).
+ */
+export const getRekapTerakhir = async (req, res) => {
+    try {
+        const data = await penugasanService.getRekapPenugasanTerakhir();
+        return res.json(data);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+};
+
+/**
+ * GET /api/penugasan/histori?cabangId=xxx
+ * Get chronological assignment history for a branch (admin only).
+ */
+export const getHistoriPenugasan = async (req, res) => {
+    try {
+        const { cabangId } = req.query;
+        if (!cabangId) return res.status(400).json({ error: 'cabangId wajib diisi' });
+        const data = await penugasanService.getHistoriPenugasanByCabang(cabangId);
+        return res.json(data);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+};

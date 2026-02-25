@@ -574,7 +574,12 @@ export function Mutations() {
                           </span>
                         </td>
                         <td className={`px-5 py-3.5 font-black ${mut.tipe === 'masuk' ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {mut.tipe === 'masuk' ? '+' : '-'}{formatCurrency(mut.nominal)}
+                          <span>{mut.tipe === 'masuk' ? '+' : '-'}{formatCurrency(mut.nominal)}</span>
+                          {mut.tipe === 'masuk' && mut.branch_name && (
+                            <span className="ml-1.5 text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">
+                              {mut.branch_name}
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-xs text-gray-500 italic max-w-[180px] truncate">{mut.keterangan}</td>
                         {canManage && (

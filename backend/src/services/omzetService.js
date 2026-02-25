@@ -105,10 +105,12 @@ export const getOmzetByUserFiltered = async (userId, month, year) => {
           ? as username,
           (SELECT nama FROM users WHERE id = ?) as nama,
           COALESCE(a.kehadiran, 1.0) as kehadiran,
-          COALESCE(c.commission_amount, 0) as komisi
+          COALESCE(c.commission_amount, 0) as komisi,
+          b.name as branch_name
         FROM omzet o 
         LEFT JOIN attendance_data a ON a.user_id = ? AND o.branch_id = a.branch_id AND o.date = a.tanggal
         LEFT JOIN commissions c ON c.user_id = ? AND o.branch_id = c.branch_id AND o.date = c.period_start
+        LEFT JOIN branches b ON b.id = o.branch_id
         WHERE o.branch_id = ?
       `;
       params = [user.id, userId, userId, userId, user.branch_id];
@@ -120,12 +122,15 @@ export const getOmzetByUserFiltered = async (userId, month, year) => {
           u.username, 
           u.nama,
           1.0 as kehadiran,
-          0 as komisi
+          COALESCE(c.commission_amount, 0) as komisi,
+          b.name as branch_name
         FROM omzet o 
-        JOIN users u ON o.user_id = u.id 
+        JOIN users u ON o.user_id = u.id
+        LEFT JOIN commissions c ON c.user_id = ? AND o.branch_id = c.branch_id AND o.date = c.period_start
+        LEFT JOIN branches b ON b.id = o.branch_id
         WHERE o.user_id = ?
       `;
-      params = [userId];
+      params = [userId, userId];
     }
 
     if (month && year) {

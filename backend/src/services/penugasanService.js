@@ -199,3 +199,67 @@ export const getMyBranches = async (userId) => {
     );
     return rows;
 };
+
+/**
+ * Get the latest active assignment per user per branch.
+ * Returns grouped by cabang_id so frontend can render per-branch tabs.
+ */
+export const getRekapPenugasanTerakhir = async () => {
+    const [rows] = await pool.execute(
+        `SELECT
+           p.id,
+           p.user_id,
+           u.nama as user_nama,
+           u.username,
+           p.cabang_id,
+           b.name as cabang_name,
+           p.tanggal_mulai,
+           p.faktor_komisi
+         FROM cs_penugasan p
+         JOIN users u ON u.id = p.user_id
+         JOIN branches b ON b.id = p.cabang_id
+         WHERE p.tanggal_mulai = (
+           -- Latest assignment for this user in THIS branch
+           SELECT MAX(p2.tanggal_mulai)
+           FROM cs_penugasan p2
+           WHERE p2.user_id = p.user_id
+             AND p2.cabang_id = p.cabang_id
+         )
+         AND u.role = 'cs'
+         ORDER BY p.cabang_id ASC, p.faktor_komisi DESC`
+    );
+    return rows;
+};
+
+/**
+ * Get full chronological assignment history for a branch.
+ * Used for the Histori tab — each row is a recorded penugasan change.
+ */
+export const getHistoriPenugasanByCabang = async (cabangId) => {
+    let sql = `
+        SELECT
+          p.id,
+          p.tanggal_mulai,
+          p.faktor_komisi,
+          p.cabang_id,
+          b.name as cabang_name,
+          p.created_at,
+          -- Aggregate all users assigned on the same tanggal_mulai for this branch
+          GROUP_CONCAT(
+            CONCAT(u.nama, ' ', ROUND(p2.faktor_komisi * 100, 0), '%')
+            ORDER BY p2.faktor_komisi DESC
+            SEPARATOR ' - '
+          ) as pembagian
+        FROM cs_penugasan p
+        JOIN branches b ON b.id = p.cabang_id
+        -- Join to get all penugasan on same date for this branch
+        JOIN cs_penugasan p2 ON p2.cabang_id = p.cabang_id AND p2.tanggal_mulai = p.tanggal_mulai
+        JOIN users u ON u.id = p2.user_id
+        WHERE p.cabang_id = ?
+        GROUP BY p.tanggal_mulai, p.cabang_id
+        ORDER BY p.tanggal_mulai ASC
+    `;
+    const params = [cabangId];
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+};

@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building, User as UserIcon, Plus, Database, ClipboardList, Trash2 } from 'lucide-react';
+import { Building, User as UserIcon, Plus, Database, ClipboardList, Trash2, BarChart2, History, ChevronDown } from 'lucide-react';
 
 interface User {
     id: string;
@@ -30,6 +30,23 @@ interface PenugasanRecord {
     created_at: string;
 }
 
+interface RekapItem {
+    user_id: string;
+    user_nama: string;
+    username: string;
+    cabang_id: string;
+    cabang_name: string;
+    tanggal_mulai: string;
+    faktor_komisi: string;
+}
+
+interface HistoriItem {
+    tanggal_mulai: string;
+    cabang_id: string;
+    cabang_name: string;
+    pembagian: string;
+}
+
 export function Penugasan() {
     const [records, setRecords] = useState<PenugasanRecord[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -45,6 +62,16 @@ export function Penugasan() {
         faktorKomisi: '',
     });
 
+    // Rekap & Histori Modal
+    const [showRekapModal, setShowRekapModal] = useState(false);
+    const [rekapTab, setRekapTab] = useState<'rekap' | 'histori'>('rekap');
+    const [rekapData, setRekapData] = useState<RekapItem[]>([]);
+    const [historiData, setHistoriData] = useState<HistoriItem[]>([]);
+    const [rekapBranch, setRekapBranch] = useState(''); // active tab in rekap view
+    const [histBranch, setHistBranch] = useState('');   // selected branch in histori
+    const [rekapLoading, setRekapLoading] = useState(false);
+    const [histLoading, setHistLoading] = useState(false);
+
     useEffect(() => {
         fetchAll();
     }, []);
@@ -52,24 +79,19 @@ export function Penugasan() {
     const fetchAll = async () => {
         setLoading(true);
         try {
-            // Fetch users first, with a fallback if /auth/users doesn't work as expected
             let userList: User[] = [];
             try {
                 userList = await api.get<User[]>('/auth/users');
             } catch (err) {
-                console.error('Failed to fetch from /auth/users, trying /users...', err);
                 try {
                     userList = await api.get<User[]>('/users');
-                } catch (err2) {
-                    console.error('Failed to fetch from /users too', err2);
-                }
+                } catch (_) { }
             }
 
             if (userList && Array.isArray(userList)) {
                 setUsers(userList.filter((u) => u.role?.toLowerCase() === 'cs'));
             }
 
-            // Fetch records and branches
             const [recs, brc] = await Promise.all([
                 api.get<PenugasanRecord[]>('/penugasan').catch(e => { console.error(e); return []; }),
                 api.get<Branch[]>('/branches').catch(e => { console.error(e); return []; }),
@@ -77,6 +99,10 @@ export function Penugasan() {
 
             setRecords(recs);
             setBranches(brc);
+            if (brc.length > 0) {
+                setRekapBranch(brc[0].id);
+                setHistBranch(brc[0].id);
+            }
         } catch (err: any) {
             console.error('Fetch error:', err);
             setError('Gagal memuat data. Pastikan tabel cs_penugasan sudah dibuat (node run_migration.js).');
@@ -85,9 +111,46 @@ export function Penugasan() {
         }
     };
 
+    const openRekapModal = async () => {
+        setShowRekapModal(true);
+        setRekapTab('rekap');
+        await fetchRekap();
+    };
+
+    const fetchRekap = async () => {
+        setRekapLoading(true);
+        try {
+            const data = await api.get<RekapItem[]>('/penugasan/rekap');
+            setRekapData(data || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setRekapLoading(false);
+        }
+    };
+
+    const fetchHistori = async (cabangId: string) => {
+        if (!cabangId) return;
+        setHistLoading(true);
+        try {
+            const data = await api.get<HistoriItem[]>(`/penugasan/histori?cabangId=${cabangId}`);
+            setHistoriData(data || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setHistLoading(false);
+        }
+    };
+
+    const handleRekapTabChange = (tab: 'rekap' | 'histori') => {
+        setRekapTab(tab);
+        if (tab === 'histori' && histBranch) {
+            fetchHistori(histBranch);
+        }
+    };
+
     const handleDelete = async (id: string) => {
         if (!window.confirm('Apakah Anda yakin ingin menghapus penugasan ini?')) return;
-
         try {
             await api.delete(`/penugasan/${id}`);
             fetchAll();
@@ -132,6 +195,13 @@ export function Penugasan() {
         }
     };
 
+    // Group rekap by cabang
+    const rekapByCabang: Record<string, RekapItem[]> = {};
+    for (const item of rekapData) {
+        if (!rekapByCabang[item.cabang_id]) rekapByCabang[item.cabang_id] = [];
+        rekapByCabang[item.cabang_id].push(item);
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -147,13 +217,22 @@ export function Penugasan() {
                     title="Penugasan CS"
                     subtitle="Kelola penugasan CS ke cabang beserta faktor komisi (total per cabang maks. 100%)"
                 />
-                <button
-                    onClick={openModal}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95"
-                >
-                    <Plus className="w-5 h-5" />
-                    Tambah Penugasan
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={openRekapModal}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl font-bold transition-all active:scale-95 text-sm"
+                    >
+                        <BarChart2 className="w-4 h-4" />
+                        Rekap &amp; Histori
+                    </button>
+                    <button
+                        onClick={openModal}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Tambah Penugasan
+                    </button>
+                </div>
             </div>
 
             {/* Table */}
@@ -173,7 +252,7 @@ export function Penugasan() {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                             {records.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center text-gray-400">
+                                    <td colSpan={6} className="px-6 py-20 text-center text-gray-400">
                                         <Database className="w-12 h-12 mx-auto mb-4 opacity-10" />
                                         <p className="font-medium">Belum ada data penugasan.</p>
                                     </td>
@@ -231,7 +310,154 @@ export function Penugasan() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* ── Modal: Rekap & Histori ─────────────────────────────────────────── */}
+            <Modal
+                isOpen={showRekapModal}
+                onClose={() => setShowRekapModal(false)}
+                title="📋 Rekap & Histori Penugasan"
+            >
+                {/* Inner tabs */}
+                <div className="flex items-center gap-1 mb-5 p-1 bg-gray-100 dark:bg-gray-800 w-fit rounded-xl">
+                    {(['rekap', 'histori'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => handleRekapTabChange(tab)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${rekapTab === tab
+                                ? 'bg-white dark:bg-gray-900 text-blue-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                }`}
+                        >
+                            {tab === 'rekap'
+                                ? <><BarChart2 className="w-3.5 h-3.5" /> Rekap Terakhir</>
+                                : <><History className="w-3.5 h-3.5" /> Histori Penugasan</>
+                            }
+                        </button>
+                    ))}
+                </div>
+
+                {/* ── TAB: REKAP TERAKHIR ───────────────────────────────────────── */}
+                {rekapTab === 'rekap' && (
+                    <div>
+                        {/* Branch tabs */}
+                        <div className="flex gap-1 mb-4 border-b border-gray-200 dark:border-gray-700">
+                            {branches.map(b => (
+                                <button
+                                    key={b.id}
+                                    onClick={() => setRekapBranch(b.id)}
+                                    className={`px-4 py-2 text-sm font-bold border-b-2 -mb-px transition-colors ${rekapBranch === b.id
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                        }`}
+                                >
+                                    {b.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        {rekapLoading ? (
+                            <div className="flex justify-center py-8"><LoadingSpinner size="md" /></div>
+                        ) : (
+                            <div className="space-y-2">
+                                {(() => {
+                                    const items = rekapByCabang[rekapBranch] || [];
+                                    if (items.length === 0) return (
+                                        <p className="text-center text-gray-400 py-8 text-sm">Belum ada penugasan aktif untuk cabang ini.</p>
+                                    );
+                                    const branchName = branches.find(b => b.id === rekapBranch)?.name || rekapBranch;
+                                    return (
+                                        <>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Building className="w-4 h-4 text-blue-500" />
+                                                <span className="text-sm font-black text-gray-700 dark:text-white">Cabang {branchName}</span>
+                                                <span className="ml-auto text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    Total: {items.reduce((s, i) => s + parseFloat(i.faktor_komisi), 0) * 100 | 0}%
+                                                </span>
+                                            </div>
+                                            {items.map((item) => (
+                                                <div key={item.user_id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 border border-gray-100 dark:border-gray-800">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-indigo-600 font-bold uppercase text-xs">
+                                                            {item.user_nama?.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-bold text-gray-900 dark:text-white">{item.user_nama}</div>
+                                                            <div className="text-[10px] text-gray-400">
+                                                                Mulai {new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-black bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                                                        {(parseFloat(item.faktor_komisi) * 100).toFixed(0)}%
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── TAB: HISTORI PENUGASAN ─────────────────────────────────────── */}
+                {rekapTab === 'histori' && (
+                    <div>
+                        {/* Branch selector */}
+                        <div className="relative mb-4">
+                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <select
+                                value={histBranch}
+                                onChange={(e) => {
+                                    setHistBranch(e.target.value);
+                                    fetchHistori(e.target.value);
+                                }}
+                                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white appearance-none text-sm font-bold"
+                            >
+                                <option value="">-- Pilih Cabang --</option>
+                                {branches.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {histLoading ? (
+                            <div className="flex justify-center py-8"><LoadingSpinner size="md" /></div>
+                        ) : historiData.length === 0 ? (
+                            <p className="text-center text-gray-400 py-8 text-sm">
+                                {histBranch ? 'Belum ada histori penugasan untuk cabang ini.' : 'Pilih cabang untuk melihat histori.'}
+                            </p>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+                                <table className="w-full text-left text-sm border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-800">
+                                            <th className="px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-wider w-10">No</th>
+                                            <th className="px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-wider">Tgl Mulai</th>
+                                            <th className="px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-wider">Pembagian</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                        {historiData.map((item, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                                <td className="px-4 py-3 text-xs font-bold text-gray-400">{String(idx + 1).padStart(2, '0')}</td>
+                                                <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                                    {new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric' })}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+                                                    {item.pembagian}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
+
+            {/* Modal: Tambah Penugasan */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
