@@ -141,7 +141,27 @@ export const updateUser = async (id, userData) => {
   return getUserProfile(id);
 };
 
+// ─── DELETE USER (Constrained) ────────────────────────────────────────────────
 export const deleteUser = async (id) => {
+  // Check for any existing relations that should prevent hard delete
+  const tablesToCheck = [
+    { name: 'commissions', label: 'Histori Komisi' },
+    { name: 'cs_penugasan', label: 'Histori Penugasan' },
+    { name: 'commission_mutations', label: 'Histori Mutasi' },
+    { name: 'attendance_data', label: 'Data Kehadiran' },
+    { name: 'withdrawal_requests', label: 'Permintaan Penarikan' }
+  ];
+
+  for (const table of tablesToCheck) {
+    const [rows] = await pool.execute(
+      `SELECT COUNT(*) as count FROM ${table.name} WHERE user_id = ?`,
+      [id]
+    );
+    if (rows[0].count > 0) {
+      throw new Error(`Pengguna tidak dapat dihapus karena sudah memiliki ${table.label}. Silakan gunakan menu 'Nonaktifkan (Resign)' saja.`);
+    }
+  }
+
   await pool.execute('DELETE FROM users WHERE id = ?', [id]);
   return { success: true };
 };

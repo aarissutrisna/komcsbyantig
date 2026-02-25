@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building, Mail, Database, Plus, Pencil, Key, Shield, User as UserIcon, UserX, UserCheck } from 'lucide-react';
+import { Building, Mail, Database, Plus, Pencil, Trash2, Key, Shield, User as UserIcon, UserX, UserCheck } from 'lucide-react';
 
 interface User {
   id: string;
@@ -125,7 +125,16 @@ Status: ${err.status || 'N/A'}`);
     }
   };
 
-
+  const handleDelete = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini? Data akan hilang permanen. Pengguna yang sudah memiliki riwayat tidak bisa dihapus.')) return;
+    try {
+      await api.delete(`/auth/users/${id}`);
+      alert('Pengguna berhasil dihapus');
+      fetchData();
+    } catch (err: any) {
+      alert(`Gagal menghapus pengguna: ${err.message || 'Terjadi kesalahan sistem'}`);
+    }
+  };
   const openResignModal = (u: User) => {
     setResignTarget(u);
     // Default to today
@@ -273,6 +282,13 @@ Status: ${err.status || 'N/A'}`);
                             <UserCheck className="w-4 h-4" />
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDelete(u.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+                          title="Hapus Permanen"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
