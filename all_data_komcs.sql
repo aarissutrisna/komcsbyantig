@@ -156,6 +156,27 @@ CREATE TABLE IF NOT EXISTS `n8n_live_cache` (
 
 -- Data exporting was unselected.
 
+-- Dumping structure for table cs_commission.omzet_stats_monthly
+CREATE TABLE `omzet_stats_monthly` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `branch_id` varchar(10) NOT NULL,
+  `year` int(11) NOT NULL,
+  `month` int(11) NOT NULL,
+  `total_omzet` decimal(15,2) DEFAULT NULL,
+  `avg_daily` decimal(15,2) DEFAULT NULL,
+  `median_daily` decimal(15,2) DEFAULT NULL,
+  `min_daily` decimal(15,2) DEFAULT NULL,
+  `max_daily` decimal(15,2) DEFAULT NULL,
+  `win_rate_max` decimal(5,2) DEFAULT NULL,
+  `win_rate_min` decimal(5,2) DEFAULT NULL,
+  `days_count` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_branch_year_month` (`branch_id`,`year`,`month`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Data exporting was unselected.
+
 -- Dumping structure for table cs_commission.omzet
 CREATE TABLE IF NOT EXISTS `omzet` (
   `id` char(36) NOT NULL,

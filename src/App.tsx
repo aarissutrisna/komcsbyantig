@@ -12,6 +12,7 @@ import { Users } from './pages/Users';
 import { Settings } from './pages/Settings';
 import { AdminSettings } from './pages/AdminSettings';
 import { Penugasan } from './pages/Penugasan';
+import { TargetAnalysis } from './pages/TargetAnalysis';
 import LandingPage from './pages/LandingPage';
 
 const App: React.FC = () => {
@@ -78,6 +79,16 @@ const App: React.FC = () => {
                 <ProtectedRoute allowedRoles={['admin']}>
                   <Layout>
                     <Penugasan />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analysis"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Layout>
+                    <TargetAnalysis />
                   </Layout>
                 </ProtectedRoute>
               }

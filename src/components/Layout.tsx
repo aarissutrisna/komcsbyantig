@@ -16,6 +16,7 @@ import {
   Moon,
   ShieldAlert,
   ClipboardList,
+  BarChart3,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -41,6 +42,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Cabang', href: '/branches', icon: Building2, roles: ['admin'] },
     { name: 'Pengguna', href: '/users', icon: Users, roles: ['admin'] },
     { name: 'Penugasan', href: '/penugasan', icon: ClipboardList, roles: ['admin'] },
+    { name: 'Analisa Target', href: '/analysis', icon: BarChart3, roles: ['admin'] },
     { name: 'Pengaturan', href: '/settings', icon: Settings, roles: ['admin', 'hrd', 'cs'] },
     { name: 'Setting Admin', href: '/admin/settings', icon: ShieldAlert, roles: ['admin'] },
   ];
