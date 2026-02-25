@@ -7,6 +7,7 @@ Penambahan modul analitik berbasis data historis untuk membantu penetapan target
 * **Perbandingan Tahunan (YoY)**: Grafik batang tergrouping per bulan (Jan–Des), pilih 1–5 tahun untuk melihat tren pertumbuhan antar tahun.
 * **Statistik Harian**: Grafik garis Rata-rata vs Median harian — basis penentuan target.
 * **Kartu Saran Target**: Slider % (50–200%) untuk Saran Min/Max. Tombol "← Pakai di Simulator" mengisi panel simulasi otomatis.
+* **Riwayat Performa Bulanan**: Selector tab tahun (2023 s/d tahun berjalan) untuk memfilter tabel histori bulanan.
 
 ### 2. Simulator Target
 * Pilih Cabang, Bulan, Tahun acuan → input angka Min/Max → **Jalankan Simulasi** → lihat Win Rate (% hari tembus target).

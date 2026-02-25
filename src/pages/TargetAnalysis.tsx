@@ -71,6 +71,13 @@ export function TargetAnalysis() {
     const [simResult, setSimResult] = useState<SimulationResult | null>(null);
     const [simLoading, setSimLoading] = useState(false);
 
+    // Filter/Utility constants
+    const currentYear = new Date().getFullYear();
+
+    // Table year filter
+    const tableYears = Array.from({ length: currentYear - 2023 + 1 }, (_, i) => 2023 + i).reverse();
+    const [selectedTableYear, setSelectedTableYear] = useState(currentYear);
+
     useEffect(() => { fetchBranches(); }, []);
     useEffect(() => { if (selectedBranch) fetchTrends(); }, [selectedBranch]);
 
@@ -113,7 +120,6 @@ export function TargetAnalysis() {
         ? recentChartData.reduce((s, d) => s + d.avg, 0) / recentChartData.length : 0;
 
     // ── MODE 2: YoY grouped by month ────────────────────────────────────────
-    const currentYear = new Date().getFullYear();
     const yoyYearList = Array.from({ length: yoyYears }, (_, i) => currentYear - i).reverse();
 
     const yoyChartData = useMemo(() => {
@@ -550,8 +556,24 @@ export function TargetAnalysis() {
 
                     {/* Monthly Table */}
                     <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4">
                             <h3 className="font-bold text-gray-900 dark:text-white">Riwayat Performa Bulanan</h3>
+
+                            {/* Year Tabs */}
+                            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                                {tableYears.map(year => (
+                                    <button
+                                        key={year}
+                                        onClick={() => setSelectedTableYear(year)}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedTableYear === year
+                                            ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                            }`}
+                                    >
+                                        {year}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
@@ -566,28 +588,30 @@ export function TargetAnalysis() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                    {allTrends.map((t, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">{MONTH_NAMES[t.month - 1]} {t.year}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.total_omzet as string))}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.avg_daily as string))}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.median_daily as string))}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${parseFloat(t.win_rate_max as string) > 40
-                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
-                                                    {parseFloat(t.win_rate_max as string).toFixed(1)}%
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${parseFloat(t.win_rate_min as string) > 60
-                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
-                                                    {parseFloat(t.win_rate_min as string).toFixed(1)}%
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {allTrends
+                                        .filter(t => t.year === selectedTableYear)
+                                        .map((t, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                                <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">{MONTH_NAMES[t.month - 1]} {t.year}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.total_omzet as string))}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.avg_daily as string))}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatIDR(parseFloat(t.median_daily as string))}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${parseFloat(t.win_rate_max as string) > 40
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30'
+                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
+                                                        {parseFloat(t.win_rate_max as string).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${parseFloat(t.win_rate_min as string) > 60
+                                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30'
+                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800'}`}>
+                                                        {parseFloat(t.win_rate_min as string).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
