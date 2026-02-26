@@ -9,7 +9,16 @@ Penambahan modul analitik berbasis data historis untuk membantu penetapan target
 * **Kartu Saran Target**: Slider % (50–200%) untuk Saran Min/Max. Tombol "← Pakai di Simulator" mengisi panel simulasi otomatis.
 * **Riwayat Performa Bulanan**: Selector tab tahun (2023 s/d tahun berjalan) untuk memfilter tabel histori bulanan.
 
-### 2. Simulator Target
+### 3. Logika Redistribusi Komisi (Fase Awal 2 Orang)
+Sistem otomatis menyesuaikan porsi komisi jika ada salah satu CS yang absen:
+- **Porsi 50:50** → Jika satu absen, CS yang hadir otomatis mendapat **100%**.
+- **Porsi 75:25** → Jika porsi 25% hadir sendiri, jatahnya naik menjadi **50%** (sisa 50% masuk toko). 
+- **Porsi 75:25** → Jika porsi 75% hadir sendiri, jatahnya naik menjadi **100%**.
+
+### 4. Ringkasan Strategi Masa Depan
+Konsep **Layer-Based Redistribution** sudah didokumentasikan untuk pertumbuhan tim (Layer Management vs Layer Staff).
+
+### 5. Simulator Target
 * Pilih Cabang, Bulan, Tahun acuan → input angka Min/Max → **Jalankan Simulasi** → lihat Win Rate (% hari tembus target).
 * Analisa otomatis: apakah target terlalu berat, ringan, atau seimbang.
 

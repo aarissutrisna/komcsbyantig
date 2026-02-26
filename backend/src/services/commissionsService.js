@@ -76,13 +76,26 @@ async function calculateCommissionByDateCore(connection, branchId, tanggal) {
     return { success: true, processed: 0, results: [], message: 'No CS users assigned to this branch on this date' };
   }
 
-  // 6. Calculate distribution using faktor_komisi
-  // komisi_user = total_pool × faktor_komisi × kehadiran
+  // 6. Calculate distribution using faktor_komisi with 2-person redistribution logic
+  const presentUsers = csUsers.filter(u => parseFloat(u.kehadiran ?? 1.0) > 0);
+  const totalAssigned = csUsers.length;
+
   const results = [];
   for (const cs of csUsers) {
     const kehadiran = parseFloat(cs.kehadiran ?? 1.0);
-    const faktorKomisi = parseFloat(cs.faktor_komisi || 0);
-    const finalCommission = totalPool * faktorKomisi * kehadiran;
+    const faktorOriginal = parseFloat(cs.faktor_komisi || 0);
+    let appliedFaktor = faktorOriginal;
+
+    // RULE: Special 2-person branch redistribution
+    if (totalAssigned === 2 && presentUsers.length === 1 && kehadiran > 0) {
+      if (faktorOriginal >= 0.5) {
+        appliedFaktor = 1.0; // 50:50 -> 100 or 75:0 -> 100
+      } else {
+        appliedFaktor = 0.5; // 0:25 -> 50
+      }
+    }
+
+    const finalCommission = totalPool * appliedFaktor * kehadiran;
 
     const commId = uuidv4();
     await connection.execute(
@@ -100,14 +113,25 @@ async function calculateCommissionByDateCore(connection, branchId, tanggal) {
          period_end = VALUES(period_end)`,
       [
         commId, cs.user_id, branchId, branchTotal, finalCommission, percentage,
-        faktorKomisi * 100,  // store as percentage for display
+        appliedFaktor * 100,  // store the applied factor for accurate history
         kehadiran,
-        JSON.stringify({ faktor_komisi: faktorKomisi, system: 'cs_penugasan' }),
+        JSON.stringify({
+          faktor_komisi: faktorOriginal,
+          applied_faktor: appliedFaktor,
+          redistributed: appliedFaktor !== faktorOriginal,
+          system: 'cs_penugasan'
+        }),
         tanggal, tanggal
       ]
     );
 
-    results.push({ userId: cs.user_id, commission: finalCommission, faktorKomisi, kehadiran });
+    results.push({
+      userId: cs.user_id,
+      commission: finalCommission,
+      faktorOriginal,
+      appliedFaktor,
+      kehadiran
+    });
   }
 
   return { success: true, processed: results.length, results };
