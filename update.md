@@ -1,4 +1,43 @@
-﻿## Update 25 Februari 2026 (Sesi 2): Fitur Analisa & Simulasi Target
+﻿## Update 27 Februari 2026: Dashboard Redesign & Branch-Scoped Access
+
+Rilis ini fokus pada penyederhanaan antarmuka utama dan penguatan kontrol akses berbasis cabang (Multi-Branch Security).
+
+### 1. Dashboard Redesign (Penyederhanaan)
+* **Target & Win Rate**: Dashboard diperbarui dengan fokus pada **Target Harian (Min/Max)** dan **Analisa Pencapaian** (% Win Rate untuk bulan tersebut).
+* **Visual Premium**: Penambahan blok analitik bertema gelap (*Dark Mode Design*) untuk visualisasi probabilitas kesuksesan target harian.
+* **Layout Efisien**: Informasi sesi dan profil pengguna dipindah ke footer yang lebih bersih, memberikan ruang utama untuk data performa.
+
+### 2. Branch-Scoped Access (Keamanan Multi-Cabang)
+* **Penyaring HRD Cabang**: HRD kini hanya dapat melihat data kehadiran/komisi karyawan pada saat karyawan tersebut memang sedang ditugaskan di cabang HRD tersebut.
+* **Warning N/A**: Jika HRD membuka user yang sedang bertugas di cabang lain, sistem akan menampilkan banner peringatan: *"Data tidak tersedia di cabang ini — bertugas di [Cabang]..."*.
+* **Badge Konteks**: Admin dan CS mendapatkan **📍 Badge Lokasi Bertugas** di atas tabel yang menunjukkan cabang penugasan untuk periode tersebut.
+
+### 3. Redistribusi Komisi (Fase 2-Orang)
+* **Keadilan bagi yang Hadir**: Implementasi logika otomatis untuk redistribusi jatah komisi jika salah satu CS absen (50:50 atau 75:25). Jatah CS yang hadir didobelkan (maks 50% atau 100% tergantung jatah asli).
+
+---
+
+### 🚀 Protokol Update & Rilis (Agreed)
+
+Gunakan langkah ini setiap kali melakukan pembaruan di server produksi:
+
+1. **Sinkronisasi Kode**:
+   ```bash
+   git pull origin main
+   ```
+2. **Build Frontend**:
+   ```bash
+   npm run build
+   ```
+3. **Restart Service**:
+   ```bash
+   pm2 restart all
+   ```
+4. **Verifikasi**: Buka dashboard dan cek versi terbaru di footer atau menu Update.
+
+---
+
+## Update 25 Februari 2026 (Sesi 2): Fitur Analisa & Simulasi Target
 
 Penambahan modul analitik berbasis data historis untuk membantu penetapan target omzet yang lebih akurat.
 
