@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/currency';
-import { TrendingUp, Users, DollarSign, Calendar, Filter, Search, RefreshCw } from 'lucide-react';
+import { TrendingUp, DollarSign, Filter, Search, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { StatCard } from '../components/ui/StatCard';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -21,6 +21,10 @@ interface Stats {
   todayCommission: number;
   totalCommission: number;
   monthlyOmzet: number;
+  minTarget: number;
+  maxTarget: number;
+  winRateMin: number;
+  winRateMax: number;
   chartData: Array<{
     date: string;
     total: number;
@@ -75,6 +79,10 @@ export function Dashboard() {
     todayCommission: 0,
     totalCommission: 0,
     monthlyOmzet: 0,
+    minTarget: 0,
+    maxTarget: 0,
+    winRateMin: 0,
+    winRateMax: 0,
     chartData: [],
   });
   const [loading, setLoading] = useState(true);
@@ -282,54 +290,106 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
-        role="region"
-        aria-label="Ringkasan statistik"
-      >
-        <StatCard
-          icon={TrendingUp}
-          iconBgClass="bg-blue-50 dark:bg-blue-900/20"
-          iconColorClass="text-blue-600 dark:text-blue-400"
-          label="Omzet Hari Ini"
-          value={formatCurrency(
-            (selectedMonth === new Date().getMonth() + 1 &&
-              selectedYear === new Date().getFullYear() &&
-              previewToday?.total) || stats.todayOmzet
-          )}
-          staggerClass="stagger-1"
-          extra={(fetchingStats || fetchingPreview) && <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />}
-        />
-        <StatCard
-          icon={DollarSign}
-          iconBgClass="bg-green-50 dark:bg-green-900/20"
-          iconColorClass="text-green-600 dark:text-green-400"
-          label="Komisi Hari Ini"
-          value={formatCurrency(stats.todayCommission)}
-          staggerClass="stagger-2"
-        />
-        <StatCard
-          icon={Calendar}
-          iconBgClass="bg-yellow-50 dark:bg-yellow-900/20"
-          iconColorClass="text-yellow-600 dark:text-yellow-400"
-          label="Total Omzet Periode"
-          value={formatCurrency(stats.monthlyOmzet)}
-          staggerClass="stagger-3"
-        />
-        <StatCard
-          icon={Users}
-          iconBgClass={stats.totalCommission < 0 ? "bg-red-100 dark:bg-red-900/30" : "bg-red-50 dark:bg-red-900/20"}
-          iconColorClass="text-red-600 dark:text-red-400"
-          label={stats.totalCommission < 0 ? "Saldo Minus (Cashbon)" : "Total Komisi Periode"}
-          value={formatCurrency(stats.totalCommission)}
-          staggerClass="stagger-4"
-          extra={stats.totalCommission < 0 && (
-            <span className="ml-2 px-1.5 py-0.5 bg-red-600 text-white text-[8px] font-black rounded uppercase animate-pulse">
-              Cashbon
-            </span>
-          )}
-        />
+      {/* 1. Daily Targets & Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Main Stats (8/12) */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <StatCard
+              icon={TrendingUp}
+              iconBgClass="bg-blue-50 dark:bg-blue-900/20"
+              iconColorClass="text-blue-600 dark:text-blue-400"
+              label="Omzet Hari Ini"
+              value={formatCurrency(
+                (selectedMonth === new Date().getMonth() + 1 &&
+                  selectedYear === new Date().getFullYear() &&
+                  previewToday?.total) || stats.todayOmzet
+              )}
+              staggerClass="stagger-1"
+              extra={(fetchingStats || fetchingPreview) && <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />}
+            />
+            <StatCard
+              icon={DollarSign}
+              iconBgClass="bg-emerald-50 dark:bg-emerald-900/20"
+              iconColorClass="text-emerald-600 dark:text-emerald-400"
+              label="Komisi Hari Ini"
+              value={formatCurrency(stats.todayCommission)}
+              staggerClass="stagger-2"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-amber-600">
+                <Filter className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target Min Harian</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{formatCurrency(stats.minTarget)}</p>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl text-indigo-600">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target Max Harian</p>
+                <p className="text-xl font-black text-gray-900 dark:text-white">{formatCurrency(stats.maxTarget)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Win Rate Analysis (4/12) */}
+        <div className="lg:col-span-4 bg-gray-900 dark:bg-black rounded-[2.5rem] p-8 text-white flex flex-col justify-between shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-12 bg-indigo-500/10 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-indigo-500/20 transition-all duration-700"></div>
+
+          <div className="relative z-10">
+            <h3 className="text-lg font-bold mb-1">Analisa Pencapaian</h3>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Statistik Win Rate Periode</p>
+
+            <div className="mt-8 space-y-6">
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-xs font-bold text-gray-300 tracking-tight">Hit Target Min</span>
+                  <span className="text-xl font-black text-amber-400">{stats.winRateMin.toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-400 rounded-full transition-all duration-1000"
+                    style={{ width: `${stats.winRateMin}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-xs font-bold text-gray-300 tracking-tight">Hit Target Max (Win)</span>
+                  <span className="text-xl font-black text-indigo-400">{stats.winRateMax.toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                    style={{ width: `${stats.winRateMax}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 relative z-10 p-4 bg-white/5 rounded-2xl border border-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[8px] font-black text-gray-500 uppercase tracking-tighter">Total Omzet Bulan Ini</p>
+                <p className="text-md font-bold text-white">{formatCurrency(stats.monthlyOmzet)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black text-gray-500 uppercase tracking-tighter">Estimasi Komisi</p>
+                <p className="text-md font-bold text-emerald-400">{formatCurrency(stats.totalCommission)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Chart */}
@@ -438,22 +498,26 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm animate-fade-in-up stagger-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Informasi Pengguna</h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="space-y-1">
-            <dt className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Username</dt>
-            <dd className="text-sm font-bold text-gray-900 dark:text-white">{user?.username}</dd>
+      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm flex flex-wrap items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-black text-gray-400">
+            {user?.nama?.charAt(0)}
           </div>
-          <div className="space-y-1">
-            <dt className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Nama Lengkap</dt>
-            <dd className="text-sm font-bold text-gray-900 dark:text-white">{user?.nama}</dd>
+          <div>
+            <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">{user?.nama}</h4>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{user?.role} • @{user?.username}</p>
           </div>
-          <div className="space-y-1">
-            <dt className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Akses Peran</dt>
-            <dd className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tighter">{user?.role}</dd>
+        </div>
+        <div className="flex gap-8 text-center sm:text-left">
+          <div>
+            <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Status Keamanan</p>
+            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[8px] font-black uppercase">Aktif Terproteksi</span>
           </div>
-        </dl>
+          <div>
+            <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Sesi Aktif</p>
+            <span className="text-[10px] font-bold text-gray-900 dark:text-white">{new Date().toLocaleDateString('id-ID')}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

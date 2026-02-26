@@ -397,6 +397,35 @@ export const getOmzetStats = async (branchId, month, year, userId) => {
 
     const [commStats] = await pool.execute(commStatsQuery, commParams);
 
+    // 4. Aggregate monthly omzet for win rate calculation
+    let monthlyDaysQuery = `SELECT total FROM omzet WHERE date LIKE ?`;
+    const monthlyDaysParams = [`${year}-${monthStr}%`];
+    if (branchId && branchId !== 'all') {
+      monthlyDaysQuery += ' AND branch_id = ?';
+      monthlyDaysParams.push(branchId);
+    }
+    const [monthlyDays] = await pool.execute(monthlyDaysQuery, monthlyDaysParams);
+    const dayTotals = monthlyDays.map(d => parseFloat(d.total || 0));
+
+    // 5. Get current targets
+    let targetQuery = `SELECT min_omzet, max_omzet FROM omzetbulanan WHERE month = ? AND year = ?`;
+    const targetParams = [month, year];
+    if (branchId && branchId !== 'all') {
+      targetQuery += ' AND branch_id = ?';
+      targetParams.push(branchId);
+    } else {
+      targetQuery += ' LIMIT 1'; // Just a fallback if 'all'
+    }
+    const [targets] = await pool.execute(targetQuery, targetParams);
+    const minTarget = parseFloat(targets[0]?.min_omzet || 0);
+    const maxTarget = parseFloat(targets[0]?.max_omzet || 0);
+
+    // Calculate Win Rates
+    const hitsMin = dayTotals.filter(t => t >= minTarget).length;
+    const hitsMax = dayTotals.filter(t => t >= maxTarget).length;
+    const winRateMin = dayTotals.length > 0 ? (hitsMin / dayTotals.length) * 100 : 0;
+    const winRateMax = dayTotals.length > 0 ? (hitsMax / dayTotals.length) * 100 : 0;
+
     // Today's omzet
     let todayOmzetQuery = `SELECT SUM(o.total) as todayOmzet FROM omzet o WHERE o.date = ?`;
     const todayOmzetParams = [today];
@@ -419,7 +448,7 @@ export const getOmzetStats = async (branchId, month, year, userId) => {
     }
     const [todayComm] = await pool.execute(todayCommQuery, todayCommParams);
 
-    // 5. Chart data (daily omzet + aggregated commission)
+    // 6. Chart data (daily omzet + aggregated commission)
     // When branchId is 'all', we also want per-branch breakdown
     let chartQuery;
     let chartParams = [];
@@ -510,6 +539,10 @@ export const getOmzetStats = async (branchId, month, year, userId) => {
       todayCommission: todayComm[0]?.todayCommission || 0,
       totalCommission: commStats[0]?.totalCommission || 0,
       monthlyOmzet: omzetStats[0]?.monthlyOmzet || 0,
+      minTarget,
+      maxTarget,
+      winRateMin,
+      winRateMax,
       chartData
     };
   } catch (error) {
