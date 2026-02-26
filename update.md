@@ -1,4 +1,5 @@
 ﻿## Update 27 Februari 2026: Dashboard Redesign & Branch-Scoped Access
+--UPDATE_HOOK:27022026>NONEED--
 
 Rilis ini fokus pada penyederhanaan antarmuka utama dan penguatan kontrol akses berbasis cabang (Multi-Branch Security).
 
@@ -71,7 +72,7 @@ Konsep **Layer-Based Redistribution** sudah didokumentasikan untuk pertumbuhan t
 * Service/API baru: `omzetAnalysisService.js`, endpoint `/api/omzet-analysis/trends`, `/simulate`, `/rebuild`.
 * Data historis 2023–2026 (34 periode) sudah di-rebuild.
 
---UPDATE_HOOK:25022026b>DATABASE--
+--UPDATE_HOOK:25022026>DATABASE--
 
 #### SQL Migrasi (jalankan di server sebelum pull):
 ```sql
