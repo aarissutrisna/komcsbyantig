@@ -9,6 +9,7 @@ router.post('/create', authMiddleware, roleMiddleware('admin', 'hrd', 'cs'), bra
 router.get('/by-date', authMiddleware, branchScopeMiddleware, omzetController.getByDate);
 router.get('/by-branch', authMiddleware, branchScopeMiddleware, omzetController.getByBranch);
 router.get('/by-user', authMiddleware, branchScopeMiddleware, omzetController.getByUser);
+router.get('/user-assignment-check', authMiddleware, branchScopeMiddleware, omzetController.getUserAssignmentCheck);
 router.get('/stats', authMiddleware, branchScopeMiddleware, omzetController.getStats);
 
 // New Refactored N8N Integration Endpoints

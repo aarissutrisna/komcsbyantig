@@ -150,7 +150,14 @@ export const getByBranch = async (req, res) => {
     if (userId === 'all') {
       omzet = await omzetService.getAggregatedOmzet(branchId, m, y);
     } else if (userId) {
-      omzet = await omzetService.getOmzetByUserFiltered(userId, m, y);
+      // Get user data with per-date branch resolution
+      const rawData = await omzetService.getOmzetByUserFiltered(userId, m, y);
+      // HRD: only show rows where the user was assigned to this HRD's branch
+      if (scope && typeof scope === 'string') {
+        omzet = rawData.filter(row => row.assigned_cabang_id === scope);
+      } else {
+        omzet = rawData;
+      }
     } else {
       omzet = await omzetService.getOmzetByBranch(branchId, m, y);
     }
@@ -171,6 +178,24 @@ export const getByUser = async (req, res) => {
 
     const omzet = await omzetService.getOmzetByUserFiltered(finalUserId, m, y);
     res.json(omzet);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * GET /omzet/user-assignment-check
+ * Returns which branch a CS user was assigned to at the start of the given month.
+ * Used by frontend to decide whether to show N/A warning for HRD.
+ */
+export const getUserAssignmentCheck = async (req, res) => {
+  try {
+    const { userId, month, year } = req.query;
+    if (!userId || !month || !year) {
+      return res.status(400).json({ error: 'userId, month, and year are required' });
+    }
+    const result = await omzetService.getUserAssignmentForMonth(userId, parseInt(month), parseInt(year));
+    res.json(result || { assignedBranchId: null, branchName: null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

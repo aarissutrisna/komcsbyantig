@@ -84,64 +84,105 @@ export const getAggregatedOmzet = async (branchId, month, year) => {
 };
 
 /**
- * Get omzet for a specific user with month/year filter
+ * Get omzet for a specific CS user with month/year filter.
+ * Branch is resolved PER DATE from cs_penugasan (not from static users.branch_id).
+ * Each row returns `assigned_cabang_id` = which branch the user was assigned to on that date.
  */
 export const getOmzetByUserFiltered = async (userId, month, year) => {
   try {
-    // For CS users: get branch omzet + their personal commission/attendance
-    // For admin: get omzet they own
-    const [userRows] = await pool.execute('SELECT id, branch_id, role FROM users WHERE id = ?', [userId]);
+    const [userRows] = await pool.execute(
+      'SELECT id, username, nama, branch_id, role FROM users WHERE id = ?',
+      [userId]
+    );
     const user = userRows[0];
     if (!user) throw new Error('User not found');
 
-    let query;
-    let params;
+    const monthStr = String(month).padStart(2, '0');
+    const dateLike = `${year}-${monthStr}%`;
 
-    if (user.role === 'cs' && user.branch_id) {
-      // CS user: show branch omzet with their personal commission & attendance
-      query = `
-        SELECT 
-          o.*, 
-          ? as username,
-          (SELECT nama FROM users WHERE id = ?) as nama,
+    if (user.role === 'cs') {
+      // Join cs_penugasan per date to find which branch user was assigned to on each day.
+      // Only include omzet rows where the branch matches the user's assignment that day.
+      const query = `
+        SELECT
+          o.*,
+          u.username,
+          u.nama,
           COALESCE(a.kehadiran, 1.0) as kehadiran,
           COALESCE(c.commission_amount, 0) as komisi,
-          b.name as branch_name
-        FROM omzet o 
-        LEFT JOIN attendance_data a ON a.user_id = ? AND o.branch_id = a.branch_id AND o.date = a.tanggal
-        LEFT JOIN commissions c ON c.user_id = ? AND o.branch_id = c.branch_id AND o.date = c.period_start
-        LEFT JOIN branches b ON b.id = o.branch_id
-        WHERE o.branch_id = ?
+          b.name as branch_name,
+          p.cabang_id as assigned_cabang_id
+        FROM omzet o
+        JOIN users u ON u.id = ?
+        JOIN cs_penugasan p ON p.user_id = ?
+          AND p.tanggal_mulai <= o.date
+          AND p.tanggal_mulai = (
+            SELECT MAX(p2.tanggal_mulai)
+            FROM cs_penugasan p2
+            WHERE p2.user_id = ? AND p2.tanggal_mulai <= o.date
+          )
+        LEFT JOIN attendance_data a
+          ON a.user_id = ? AND a.branch_id = p.cabang_id AND a.tanggal = o.date
+        LEFT JOIN commissions c
+          ON c.user_id = ? AND c.branch_id = p.cabang_id AND c.period_start = o.date
+        LEFT JOIN branches b ON b.id = p.cabang_id
+        WHERE o.branch_id = p.cabang_id
+          AND o.date LIKE ?
+        ORDER BY o.date DESC
       `;
-      params = [user.id, userId, userId, userId, user.branch_id];
+      const params = [userId, userId, userId, userId, userId, dateLike];
+      const [rows] = await pool.execute(query, params);
+      return rows;
     } else {
-      // Admin/HRD: show omzet they own
-      query = `
-        SELECT 
-          o.*, 
-          u.username, 
+      // Admin/HRD: show omzet they own (no cs_penugasan needed)
+      const query = `
+        SELECT
+          o.*,
+          u.username,
           u.nama,
           1.0 as kehadiran,
           COALESCE(c.commission_amount, 0) as komisi,
-          b.name as branch_name
-        FROM omzet o 
+          b.name as branch_name,
+          o.branch_id as assigned_cabang_id
+        FROM omzet o
         JOIN users u ON o.user_id = u.id
-        LEFT JOIN commissions c ON c.user_id = ? AND o.branch_id = c.branch_id AND o.date = c.period_start
+        LEFT JOIN commissions c
+          ON c.user_id = ? AND o.branch_id = c.branch_id AND o.date = c.period_start
         LEFT JOIN branches b ON b.id = o.branch_id
         WHERE o.user_id = ?
+          AND o.date LIKE ?
+        ORDER BY o.date DESC
       `;
-      params = [userId, userId];
+      const [rows] = await pool.execute(query, [userId, userId, dateLike]);
+      return rows;
     }
+  } catch (error) {
+    throw error;
+  }
+};
 
-    if (month && year) {
-      const monthStr = String(month).padStart(2, '0');
-      query += ' AND o.date LIKE ?';
-      params.push(`${year}-${monthStr}%`);
-    }
+/**
+ * Determine which branch a user (CS) was assigned to for the majority of a given month.
+ * Returns { assignedBranchId, branchName } or null if no penugasan found.
+ * Used by the frontend to show N/A warning before fetching data.
+ */
+export const getUserAssignmentForMonth = async (userId, month, year) => {
+  try {
+    const monthStr = String(month).padStart(2, '0');
+    // Use the first day of the month as the representative date for assignment lookup
+    const referenceDate = `${year}-${monthStr}-01`;
 
-    query += ' ORDER BY o.date DESC';
-    const [rows] = await pool.execute(query, params);
-    return rows;
+    const [rows] = await pool.execute(
+      `SELECT p.cabang_id as assignedBranchId, b.name as branchName
+       FROM cs_penugasan p
+       JOIN branches b ON b.id = p.cabang_id
+       WHERE p.user_id = ?
+         AND p.tanggal_mulai <= ?
+       ORDER BY p.tanggal_mulai DESC
+       LIMIT 1`,
+      [userId, referenceDate]
+    );
+    return rows[0] || null;
   } catch (error) {
     throw error;
   }

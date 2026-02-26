@@ -90,6 +90,12 @@ export function DataAttendance() {
   const [updating, setUpdating] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
+  // Branch-Scope access control state
+  const [assignmentInfo, setAssignmentInfo] = useState<{
+    assignedBranchId: string | null;
+    branchName: string | null;
+  } | null>(null);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -97,10 +103,27 @@ export function DataAttendance() {
   useEffect(() => {
     if (selectedBranch) {
       fetchUsers();
-      fetchOmzet();
       fetchMonthlyTarget();
+      if (selectedUser !== 'all' && user?.role !== 'admin') {
+        // Check which branch this user was assigned to this month/year
+        checkUserAssignment(selectedUser).then(() => fetchOmzet());
+      } else {
+        setAssignmentInfo(null);
+        fetchOmzet();
+      }
     }
   }, [selectedBranch, selectedMonth, selectedYear, selectedUser]);
+
+  const checkUserAssignment = async (targetUserId: string) => {
+    try {
+      const data = await api.get<{ assignedBranchId: string | null; branchName: string | null }>(
+        `/omzet/user-assignment-check?userId=${targetUserId}&month=${selectedMonth}&year=${selectedYear}`
+      );
+      setAssignmentInfo(data);
+    } catch {
+      setAssignmentInfo(null);
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -486,6 +509,33 @@ export function DataAttendance() {
             </div>
           </div>
         </div>
+
+        {/* Branch-scope access warning — for HRD viewing a user assigned to another branch */}
+        {selectedUser !== 'all' && isHRD && assignmentInfo && assignmentInfo.assignedBranchId !== null &&
+          assignmentInfo.assignedBranchId !== user?.branch_id && (
+            <div className="mx-6 mt-4 mb-2 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800/30">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                  Data tidak tersedia di cabang ini
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1 leading-relaxed">
+                  Pada {new Date(0, selectedMonth - 1).toLocaleString('id-ID', { month: 'long' })} {selectedYear},
+                  karyawan ini bertugas di cabang <strong>{assignmentInfo.branchName}</strong>.
+                  Data hanya dapat dilihat oleh Admin dan HRD {assignmentInfo.branchName}.
+                </p>
+              </div>
+            </div>
+          )}
+
+        {/* Context badge — for admin/CS showing which branch the user was in that month */}
+        {selectedUser !== 'all' && (isAdmin || isCS) && assignmentInfo?.assignedBranchId && (
+          <div className="px-6 pt-3 pb-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-full text-[11px] font-bold border border-indigo-100 dark:border-indigo-800/30">
+              📍 Bertugas di {assignmentInfo.branchName} — {new Date(0, selectedMonth - 1).toLocaleString('id-ID', { month: 'long' })} {selectedYear}
+            </span>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
