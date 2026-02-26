@@ -209,8 +209,9 @@ Panduan lengkap untuk understanding dan mengoperasikan CS Commission System deng
 ### For DevOps/SRE
 1. **SETUP.md** (45 min) - Production deployment
 2. **README-N8N-WORKFLOW.md** (20 min) - N8N configuration
-3. **README.md** (15 min) - Architecture overview
-4. **schema.sql** (10 min) - Database setup
+3. **docs/UPDATE-HOOK-PROTOCOL.md** (10 min) - **Automated deployment setup**
+4. **README.md** (15 min) - Architecture overview
+5. **docs/DATABASE-SCHEMA.md** (10 min) - Database setup
 
 **Total**: ~90 minutes
 
