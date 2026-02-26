@@ -161,6 +161,28 @@ Panduan lengkap untuk understanding dan mengoperasikan CS Commission System deng
 
 ---
 
+### docs/DATABASE-SCHEMA.md {#db-schema}
+**Database Architecture & AI Maintenance Protocol**
+- Table definitions & relationships
+- AI Maintenance Protocol (Mandatory for updates)
+- SQL migration requirements
+
+**When to read**: Modifying database or preparing for updates
+**Time**: 10 minutes
+
+---
+
+### docs/UPDATE-HOOK-PROTOCOL.md {#hook-protocol}
+**Production Update Hook standard** ⭐ **NEW**
+- Instruction format: `--UPDATE_HOOK:DDMMYYYY>ACTION--`
+- `ACTION` keywords: `NONEED`, `NPMINSTALL`, `DATABASE`
+- Automated deployment bash examples
+
+**When to read**: Setting up/debugging automated deployment script
+**Time**: 5-10 minutes
+
+---
+
 ## 🗺️ Reading Path by Role
 
 ### For Frontend Developer
