@@ -34,6 +34,15 @@ export const rebuild = async (req, res) => {
     }
 };
 
+export const rebuildAll = async (req, res) => {
+    try {
+        const result = await omzetAnalysisService.rebuildAllStats();
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 export const importLegacy = async (req, res) => {
     try {
         const { data } = req.body; // Array of { branch_id, date, total }

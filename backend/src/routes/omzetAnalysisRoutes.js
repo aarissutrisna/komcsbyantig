@@ -10,6 +10,7 @@ router.use(roleMiddleware('admin'));
 router.get('/trends', omzetAnalysisController.getTrends);
 router.post('/simulate', omzetAnalysisController.simulate);
 router.post('/rebuild', omzetAnalysisController.rebuild);
+router.post('/rebuild-all', omzetAnalysisController.rebuildAll);
 router.post('/import-legacy', omzetAnalysisController.importLegacy);
 
 export default router;

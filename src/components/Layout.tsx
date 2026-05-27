@@ -35,21 +35,42 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'hrd', 'cs'] },
-    { name: 'Data & Kehadiran', href: '/data', icon: CalendarCheck, roles: ['admin', 'hrd', 'cs'] },
-    { name: 'Mutasi Komisi', href: '/mutations', icon: DollarSign, roles: ['admin', 'hrd', 'cs'] },
-    { name: 'Cabang', href: '/branches', icon: Building2, roles: ['admin'] },
-    { name: 'Pengguna', href: '/users', icon: Users, roles: ['admin'] },
-    { name: 'Penugasan', href: '/penugasan', icon: ClipboardList, roles: ['admin'] },
-    { name: 'Analisa Target', href: '/analysis', icon: BarChart3, roles: ['admin'] },
-    { name: 'Pengaturan', href: '/settings', icon: Settings, roles: ['admin', 'hrd', 'cs'] },
-    { name: 'Setting Admin', href: '/admin/settings', icon: ShieldAlert, roles: ['admin'] },
+  const navigationGroups = [
+    {
+      title: 'Utama',
+      items: [
+        { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'hrd', 'cs'] },
+      ]
+    },
+    {
+      title: 'Operasional',
+      items: [
+        { name: 'Data & Kehadiran', href: '/data', icon: CalendarCheck, roles: ['admin', 'hrd', 'cs'] },
+        { name: 'Mutasi Komisi', href: '/mutations', icon: DollarSign, roles: ['admin', 'hrd', 'cs'] },
+        { name: 'Penugasan', href: '/penugasan', icon: ClipboardList, roles: ['admin'] },
+      ]
+    },
+    {
+      title: 'Master & Analisa',
+      items: [
+        { name: 'Cabang', href: '/branches', icon: Building2, roles: ['admin'] },
+        { name: 'Pengguna', href: '/users', icon: Users, roles: ['admin'] },
+        { name: 'Analisa Target', href: '/analysis', icon: BarChart3, roles: ['admin'] },
+      ]
+    },
+    {
+      title: 'Sistem',
+      items: [
+        { name: 'Pengaturan', href: '/settings', icon: Settings, roles: ['admin', 'hrd', 'cs'] },
+        { name: 'Setting Admin', href: '/admin/settings', icon: ShieldAlert, roles: ['admin'] },
+      ]
+    },
   ];
 
-  const filteredNavigation = navigation.filter(
-    (item) => user && item.roles.includes(user.role)
-  );
+  const filteredGroups = navigationGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => user && item.roles.includes(user.role))
+  })).filter(group => group.items.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
@@ -115,26 +136,35 @@ export function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1" aria-label="Menu utama">
-            {filteredNavigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${isActive
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold border-l-[3px] border-blue-600 dark:border-blue-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-                  <span className="font-medium">{item.name}</span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar" aria-label="Menu utama">
+            {filteredGroups.map((group) => (
+              <div key={group.title} className="space-y-1">
+                <h3 className="px-4 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">
+                  {group.title}
+                </h3>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-150 ${isActive
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold border-l-[3px] border-blue-600 dark:border-blue-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          }`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
           {/* Logout */}

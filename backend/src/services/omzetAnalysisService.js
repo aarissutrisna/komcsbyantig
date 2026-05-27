@@ -83,6 +83,23 @@ export const rebuildAggregation = async (year, month, branchId = null) => {
     }
 };
 
+export const rebuildAllStats = async () => {
+    const conn = await pool.getConnection();
+    try {
+        const [months] = await conn.execute(
+            'SELECT DISTINCT YEAR(date) as year, MONTH(date) as month FROM omzet ORDER BY year, month'
+        );
+        let totalProcessed = 0;
+        for (const { year, month } of months) {
+            await rebuildAggregation(year, month);
+            totalProcessed++;
+        }
+        return { success: true, processedMonths: totalProcessed };
+    } finally {
+        conn.release();
+    }
+};
+
 export const getHistoricalTrends = async (branchId) => {
     const [rows] = await pool.execute(`
     SELECT year, month, total_omzet, avg_daily, median_daily, win_rate_max, win_rate_min 

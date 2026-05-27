@@ -51,6 +51,7 @@ export function TargetAnalysis() {
     const [selectedBranch, setSelectedBranch] = useState('');
     const [allTrends, setAllTrends] = useState<TrendData[]>([]);
     const [loading, setLoading] = useState(false);
+    const [rebuildAllLoading, setRebuildAllLoading] = useState(false);
 
     // Chart controls
     const [chartMode, setChartMode] = useState<ChartMode>('recent');
@@ -184,6 +185,20 @@ export function TargetAnalysis() {
         } catch { alert('Gagal memperbarui statistik'); }
     };
 
+    const handleRebuildAll = async () => {
+        if (!confirm('Rebuild ulang statistik SEMUA kantor/cabang dan tanggal sampai hari ini?\n\nProses ini akan merekap ulang seluruh data transaksi yang ada di database.')) return;
+        setRebuildAllLoading(true);
+        try {
+            await api.post('/omzet-analysis/rebuild-all', {});
+            alert('Semua statistik berhasil diperbarui untuk seluruh cabang!');
+            fetchTrends();
+        } catch { 
+            alert('Gagal memperbarui seluruh statistik'); 
+        } finally {
+            setRebuildAllLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -200,6 +215,15 @@ export function TargetAnalysis() {
                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                 </div>
+
+                <button
+                    onClick={handleRebuildAll}
+                    disabled={rebuildAllLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${rebuildAllLoading ? 'animate-spin' : ''}`} />
+                    {rebuildAllLoading ? 'Memproses...' : 'Refresh Statistik All'}
+                </button>
 
                 {/* Chart mode toggle */}
                 <div className="flex items-center gap-1 ml-auto bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
