@@ -1,6 +1,6 @@
-# Production Setup Guide - VPS Deployment
+# Production Setup Guide - VPS Deployment (MariaDB)
 
-Complete guide untuk deploy aplikasi ke production VPS.
+Complete guide untuk deploy aplikasi ke production VPS dengan MariaDB.
 
 ## VPS Requirements
 
@@ -22,8 +22,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y \
   curl \
   git \
-  postgresql \
-  postgresql-contrib \
+  mariadb-server \
+  mariadb-client \
   nodejs \
   npm \
   nginx \
@@ -33,41 +33,49 @@ sudo apt install -y \
 
 ### 1.3 Verify Installations
 ```bash
-node --version    # v16 or higher
+node --version    # v18 or higher
 npm --version     # v8 or higher
-psql --version    # v12 or higher
+mysql --version   # MariaDB 11.4+
 nginx --version
 ```
 
-## Step 2: PostgreSQL Setup
+## Step 2: MariaDB Setup
 
-### 2.1 Start PostgreSQL
+### 2.1 Start MariaDB
 ```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
 ```
 
-### 2.2 Create Database
+### 2.2 Secure MariaDB
 ```bash
-sudo -u postgres createdb cs_commission
+sudo mysql_secure_installation
 ```
 
-### 2.3 Create DB User
+### 2.3 Create Database
 ```bash
-sudo -u postgres psql
-postgres=# CREATE USER cs_user WITH PASSWORD 'strong_password_here';
-postgres=# GRANT ALL PRIVILEGES ON DATABASE cs_commission TO cs_user;
-postgres=# \q
+sudo mysql -e "CREATE DATABASE cs_commission CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-### 2.4 Load Schema
+### 2.4 Create DB User
 ```bash
-sudo -u postgres psql -d cs_commission -f schema.sql
+sudo mysql
+```
+```sql
+CREATE USER 'cs_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+GRANT ALL PRIVILEGES ON cs_commission.* TO 'cs_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+### 2.5 Load Schema
+```bash
+mysql -u cs_user -p cs_commission < schema_mariadb.sql
 ```
 
 Verify:
 ```bash
-sudo -u postgres psql -d cs_commission -c "\dt"
+mysql -u cs_user -p cs_commission -e "SHOW TABLES;"
 ```
 
 ## Step 3: Backend Setup
@@ -95,12 +103,12 @@ Edit `.env`:
 NODE_ENV=production
 PORT=3000
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=3306
 DB_NAME=cs_commission
 DB_USER=cs_user
 DB_PASSWORD=strong_password_here
-JWT_SECRET=your_super_secret_key_minimum_32_characters_long
-JWT_EXPIRY=7d
+JWT_SECRET=your_super_secret_key_minimum_32_characters
+N8N_WEBHOOK_SECRET=token_rahasia_untuk_n8n_prod
 CORS_ORIGIN=https://your-domain.com
 ```
 
@@ -127,7 +135,7 @@ pm2 logs cs-commission-api
 
 ### 4.1 Build Frontend
 ```bash
-cd /home/ubuntu/cs-commission/frontend
+cd /home/ubuntu/cs-commission
 npm install --production
 npm run build
 ```
@@ -174,7 +182,7 @@ server {
     proxy_set_header Host $host;
     proxy_cache_bypass $http_upgrade;
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $proxy_addrs;
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
@@ -249,7 +257,7 @@ BACKUP_DIR="/home/ubuntu/backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 mkdir -p $BACKUP_DIR
-sudo -u postgres pg_dump cs_commission | gzip > $BACKUP_DIR/cs_commission_$TIMESTAMP.sql.gz
+mysqldump -u cs_user -p'strong_password_here' cs_commission | gzip > $BACKUP_DIR/cs_commission_$TIMESTAMP.sql.gz
 
 # Keep only last 7 days
 find $BACKUP_DIR -type f -mtime +7 -delete
@@ -329,16 +337,16 @@ df -h
 ```bash
 pm2 logs cs-commission-api
 # Check .env file
-# Check PostgreSQL connection
+# Check MariaDB connection
 ```
 
 **Cannot connect to database**
 ```bash
-# Check PostgreSQL running
-sudo systemctl status postgresql
+# Check MariaDB running
+sudo systemctl status mariadb
 
 # Test connection
-psql -h localhost -U cs_user -d cs_commission
+mysql -u cs_user -p cs_commission
 ```
 
 **Nginx 502 Bad Gateway**
@@ -370,6 +378,7 @@ sudo certbot renew -v
 - [ ] Frontend SPA routing working
 - [ ] Database credentials secured in .env (not in git)
 - [ ] JWT_SECRET strong and unique
+- [ ] N8N_WEBHOOK_SECRET configured
 - [ ] CORS_ORIGIN set to domain only
 - [ ] Logs monitoring setup
 - [ ] Database backups automated
@@ -380,3 +389,6 @@ sudo certbot renew -v
 **Production URL**: https://your-domain.com
 **API URL**: https://your-domain.com/api
 **Admin Login**: admin@gmail.com / admin123
+
+---
+**Last Updated**: 2026-06-20

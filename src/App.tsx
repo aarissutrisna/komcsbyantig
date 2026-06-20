@@ -14,6 +14,8 @@ import { AdminSettings } from './pages/AdminSettings';
 import { Penugasan } from './pages/Penugasan';
 import { TargetAnalysis } from './pages/TargetAnalysis';
 import LandingPage from './pages/LandingPage';
+import { TransferBonus } from './pages/TransferBonus';
+import { ClaimedBonusTransfer } from './pages/ClaimedBonusTransfer';
 
 const App: React.FC = () => {
   return (
@@ -99,6 +101,26 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <Layout>
                     <Settings />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transfer-bonus"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TransferBonus />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/claimed-bonus"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ClaimedBonusTransfer />
                   </Layout>
                 </ProtectedRoute>
               }

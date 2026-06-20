@@ -14,6 +14,8 @@ import {
     Upload,
     Calculator,
     AlertTriangle,
+    Link2,
+    Save,
 } from 'lucide-react';
 
 interface Branch {
@@ -62,8 +64,21 @@ export function AdminSettings() {
         errors: any[];
     } | null>(null);
 
+    // Webhook Transfer Bonus URL
+    const [webhookUrl, setWebhookUrl] = useState('');
+    const [savingWebhook, setSavingWebhook] = useState(false);
+    const [webhookSaved, setWebhookSaved] = useState(false);
+
+    // Bonus Transfer Settings
+    const [bonusPembagi, setBonusPembagi] = useState(10000000);
+    const [bonusPengali, setBonusPengali] = useState(5000);
+    const [savingBonus, setSavingBonus] = useState(false);
+    const [bonusSaved, setBonusSaved] = useState(false);
+
     useEffect(() => {
         fetchData();
+        fetchWebhookUrl();
+        fetchBonusSettings();
     }, []);
 
     const fetchData = async () => {
@@ -83,6 +98,58 @@ export function AdminSettings() {
             console.error('Failed to fetch admin settings', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchWebhookUrl = async () => {
+        try {
+            const data = await api.get<{ url: string }>('/settings/webhook-transfer-bonus');
+            setWebhookUrl(data.url || '');
+        } catch {
+            // ignore — default ditampilkan dari placeholder
+        }
+    };
+
+    const fetchBonusSettings = async () => {
+        try {
+            const data = await api.get<{ pembagi: number; pengali: number }>('/settings/bonus-transfer');
+            setBonusPembagi(data.pembagi || 10000000);
+            setBonusPengali(data.pengali || 5000);
+        } catch {
+            // ignore
+        }
+    };
+
+    const handleSaveBonusSettings = async () => {
+        if (!bonusPembagi || bonusPembagi <= 0 || !bonusPengali || bonusPengali <= 0) {
+            alert('Nilai pembagi dan pengali harus lebih dari 0');
+            return;
+        }
+        setSavingBonus(true);
+        setBonusSaved(false);
+        try {
+            await api.post('/settings/bonus-transfer', { pembagi: Number(bonusPembagi), pengali: Number(bonusPengali) });
+            setBonusSaved(true);
+            setTimeout(() => setBonusSaved(false), 3000);
+        } catch (err: any) {
+            alert('Gagal menyimpan pengaturan bonus: ' + err.message);
+        } finally {
+            setSavingBonus(false);
+        }
+    };
+
+    const handleSaveWebhookUrl = async () => {
+        if (!webhookUrl.trim()) return;
+        setSavingWebhook(true);
+        setWebhookSaved(false);
+        try {
+            await api.post('/settings/webhook-transfer-bonus', { url: webhookUrl.trim() });
+            setWebhookSaved(true);
+            setTimeout(() => setWebhookSaved(false), 3000);
+        } catch (err: any) {
+            alert('Gagal menyimpan URL: ' + err.message);
+        } finally {
+            setSavingWebhook(false);
         }
     };
 
@@ -308,6 +375,120 @@ export function AdminSettings() {
                         >
                             Simpan Pengaturan Scheduler
                         </button>
+                    </div>
+                </section>
+
+                {/* 3. Webhook Transfer Bonus Config Card */}
+                <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden transition-all">
+                    <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                <Link2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Webhook Transfer Item Bonus</h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">URL n8n untuk halaman Transfer Bonus (dapat diakses semua user)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 space-y-5">
+                        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-xs space-y-2">
+                            <p className="font-bold text-indigo-800 dark:text-indigo-400">Parameter yang dikirim otomatis:</p>
+                            <code className="block bg-white dark:bg-gray-800 p-2 rounded border border-indigo-50 dark:border-indigo-900/50 font-mono text-indigo-600 dark:text-indigo-300">
+                                GET &lt;URL&gt;?startDate=YYYY-MM-DD&amp;endDate=YYYY-MM-DD&amp;direction=All
+                            </code>
+                            <p className="text-indigo-700/70 dark:text-indigo-400/70 italic">
+                                * direction: <code>All</code>, <code>UTMtoJTJ</code>, atau <code>JTJtoUTM</code>
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                URL Webhook n8n
+                            </label>
+                            <input
+                                id="webhook-transfer-bonus-url"
+                                type="url"
+                                value={webhookUrl}
+                                onChange={e => setWebhookUrl(e.target.value)}
+                                placeholder="http://192.168.100.12:5678/webhook/transfer-bonus-v2"
+                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                            />
+                        </div>
+
+                        <button
+                            id="save-webhook-url-btn"
+                            onClick={handleSaveWebhookUrl}
+                            disabled={savingWebhook || !webhookUrl.trim()}
+                            className={`w-full py-3.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                                webhookSaved
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-500/10'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 text-white shadow-lg shadow-indigo-500/10'
+                            }`}
+                        >
+                            {savingWebhook
+                                ? <RefreshCw className="w-4 h-4 animate-spin" />
+                                : webhookSaved
+                                    ? <CheckCircle2 className="w-4 h-4" />
+                                    : <Save className="w-4 h-4" />
+                            }
+                            {savingWebhook ? 'Menyimpan...' : webhookSaved ? 'URL Tersimpan!' : 'Simpan URL Webhook'}
+                        </button>
+
+                        {/* ── Bonus Calculation Settings ────────────────────────── */}
+                        <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-4">
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Calculator className="w-4 h-4 text-indigo-500" />
+                                Pengaturan Perhitungan Bonus
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Rumus: <code className="text-indigo-600 dark:text-indigo-400">(Total / Nilai Pembagi) × Pengali Bonus</code>
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                        Nilai Pembagi (Rp)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={bonusPembagi}
+                                        onChange={e => setBonusPembagi(Number(e.target.value))}
+                                        placeholder="10000000"
+                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
+                                        Pengali Bonus (Rp)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={bonusPengali}
+                                        onChange={e => setBonusPengali(Number(e.target.value))}
+                                        placeholder="5000"
+                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleSaveBonusSettings}
+                                disabled={savingBonus}
+                                className={`w-full py-3 font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                                    bonusSaved
+                                        ? 'bg-green-600 text-white shadow-lg shadow-green-500/10'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 text-white shadow-lg shadow-indigo-500/10'
+                                }`}
+                            >
+                                {savingBonus
+                                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                                    : bonusSaved
+                                        ? <CheckCircle2 className="w-4 h-4" />
+                                        : <Save className="w-4 h-4" />
+                                }
+                                {savingBonus ? 'Menyimpan...' : bonusSaved ? 'Pengaturan Tersimpan!' : 'Simpan Pengaturan Bonus'}
+                            </button>
+                        </div>
                     </div>
                 </section>
 

@@ -17,6 +17,8 @@ import {
   ShieldAlert,
   ClipboardList,
   BarChart3,
+  ArrowLeftRight,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -48,6 +50,13 @@ export function Layout({ children }: LayoutProps) {
         { name: 'Data & Kehadiran', href: '/data', icon: CalendarCheck, roles: ['admin', 'hrd', 'cs'] },
         { name: 'Mutasi Komisi', href: '/mutations', icon: DollarSign, roles: ['admin', 'hrd', 'cs'] },
         { name: 'Penugasan', href: '/penugasan', icon: ClipboardList, roles: ['admin'] },
+      ]
+    },
+    {
+      title: 'Transfer Item Bonus',
+      items: [
+        { name: 'Transfer Bonus', href: '/transfer-bonus', icon: ArrowLeftRight, roles: ['admin', 'hrd', 'cs'] },
+        { name: 'Klaim Bonus', href: '/claimed-bonus', icon: ClipboardCheck, roles: ['admin', 'hrd', 'cs'] },
       ]
     },
     {

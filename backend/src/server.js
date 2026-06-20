@@ -16,6 +16,8 @@ import penugasanRoutes from './routes/penugasanRoutes.js';
 import stableRoutes from './routes/stableRoutes.js';
 import omzetAnalysisRoutes from './routes/omzetAnalysisRoutes.js';
 import * as schedulerService from './services/schedulerService.js';
+import transferBonusRoutes from './routes/transferBonusRoutes.js';
+import bonusClaimsRoutes from './routes/bonusClaimsRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +53,8 @@ app.use('/api/mutasi', mutasiRoutes);
 app.use('/api/penugasan', penugasanRoutes);
 app.use('/api/stable', stableRoutes);
 app.use('/api/omzet-analysis', omzetAnalysisRoutes);
+app.use('/api/transfer-bonus', transferBonusRoutes);
+app.use('/api/bonus-claims', bonusClaimsRoutes);
 
 // Catch-all route for SPA handling
 app.get('*', (req, res, next) => {
