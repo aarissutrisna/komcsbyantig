@@ -124,7 +124,7 @@ export function ClaimedBonusTransfer() {
   };
 
   const handleDeleteClaim = async (claimId: number, desc: string) => {
-    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus klaim "${desc}"?\n\nSemua transaksi dalam klaim ini akan dapat dihitung ulang di menu Transfer Bonus.`);
+    const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus klaim "${desc}"?\n\nSemua transaksi dalam klaim ini akan dapat dihitung ulang di menu Transfer Bonus.`);
     if (!confirmDelete) return;
 
     try {
@@ -132,6 +132,7 @@ export function ClaimedBonusTransfer() {
       alert(res.message || 'Klaim berhasil dihapus.');
       fetchClaims();
     } catch (err: any) {
+      console.error('Error deleting claim:', err);
       alert(err.message || 'Gagal menghapus klaim.');
     }
   };

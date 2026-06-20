@@ -261,3 +261,42 @@ INSERT INTO branches (id, name, city) VALUES
   ('TSM', 'Puncak Jaya Baja TSM', 'Puncak Jaya Baja TSM')
 ON DUPLICATE KEY UPDATE name = VALUES(name), city = VALUES(city);
 
+
+-- Table: bonus_transfer_claims
+DROP TABLE IF EXISTS `bonus_transfer_claims`;
+CREATE TABLE `bonus_transfer_claims` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `keterangan` text DEFAULT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `direction` varchar(50) NOT NULL DEFAULT 'All',
+  `pembagi` int(11) NOT NULL,
+  `pengali` int(11) NOT NULL,
+  `total_nilai` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `bonus_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `item_count` int(11) NOT NULL DEFAULT 0,
+  `created_by_id` varchar(36) DEFAULT NULL,
+  `created_by_name` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_claims_created_at` (`created_at` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: bonus_transfer_claim_items
+DROP TABLE IF EXISTS `bonus_transfer_claim_items`;
+CREATE TABLE `bonus_transfer_claim_items` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `claim_id` int(10) unsigned NOT NULL,
+  `notransaksi` varchar(100) NOT NULL,
+  `tanggal` varchar(50) DEFAULT NULL,
+  `kantordari` varchar(100) DEFAULT NULL,
+  `kantortujuan` varchar(100) DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
+  `total_nilai` decimal(18,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id`),
+  KEY `idx_claim_items_notransaksi` (`notransaksi`),
+  KEY `fk_claim_items_claim` (`claim_id`),
+  CONSTRAINT `fk_claim_items_claim` FOREIGN KEY (`claim_id`) REFERENCES `bonus_transfer_claims` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+

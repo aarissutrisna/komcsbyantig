@@ -1,4 +1,49 @@
-﻿## Update 27 Februari 2026: Dashboard Redesign & Branch-Scoped Access
+## Update 21 Juni 2026: Fitur Klaim Bonus Transfer Item
+--UPDATE_HOOK:21062026>DATABASE--
+
+#### SQL Migrasi (jalankan di server sebelum pull):
+```sql
+CREATE TABLE IF NOT EXISTS bonus_transfer_claims (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  keterangan      TEXT,
+  start_date      DATE         NOT NULL,
+  end_date        DATE         NOT NULL,
+  direction       VARCHAR(50)  NOT NULL DEFAULT 'All',
+  pembagi         INT          NOT NULL,
+  pengali         INT          NOT NULL,
+  total_nilai     DECIMAL(18,2) NOT NULL DEFAULT 0,
+  bonus_amount    DECIMAL(18,2) NOT NULL DEFAULT 0,
+  item_count      INT          NOT NULL DEFAULT 0,
+  created_by_id   VARCHAR(36),
+  created_by_name VARCHAR(255),
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS bonus_transfer_claim_items (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  claim_id     INT UNSIGNED NOT NULL,
+  notransaksi  VARCHAR(100) NOT NULL,
+  tanggal      VARCHAR(50),
+  kantordari   VARCHAR(100),
+  kantortujuan VARCHAR(100),
+  keterangan   TEXT,
+  total_nilai  DECIMAL(18,2) NOT NULL DEFAULT 0,
+  FOREIGN KEY (claim_id) REFERENCES bonus_transfer_claims(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IF NOT EXISTS idx_claim_items_notransaksi ON bonus_transfer_claim_items(notransaksi);
+CREATE INDEX IF NOT EXISTS idx_claims_created_at ON bonus_transfer_claims(created_at DESC);
+```
+
+> **Deploy**:
+> 1. Jalankan SQL migrasi di atas
+> 2. `git pull origin main`
+> 3. `npm run build`
+> 4. `pm2 restart all`
+
+---
+
+## Update 27 Februari 2026: Dashboard Redesign & Branch-Scoped Access
 --UPDATE_HOOK:27022026>NONEED--
 
 Rilis ini fokus pada penyederhanaan antarmuka utama dan penguatan kontrol akses berbasis cabang (Multi-Branch Security).
