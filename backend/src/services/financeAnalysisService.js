@@ -88,7 +88,8 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
       skip_overdue_kronis: !!skipOverdueKronis,
       ignored_suppliers: ignoredSuppliers || [],
       use_cash_for_debt: !!options.useCashForDebt
-    }
+    },
+    cash_breakdown: options.cashBreakdown || null
   };
 
   // 7. Save analysis run (only if not preview)

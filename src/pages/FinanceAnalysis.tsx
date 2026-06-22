@@ -132,6 +132,19 @@ interface AnalysisResult {
     h45: HorizonBudget;
     h60: HorizonBudget;
   };
+  cash_breakdown?: CashBreakdown | null;
+}
+
+interface CashBreakdown {
+  kas_toko: number;
+  bank_bca: number;
+  bank_bri: number;
+  bank_mandiri: number;
+  bank_bni: number;
+  bank_bsi: number;
+  bank_lainnya_1: number;
+  bank_lainnya_2: number;
+  bank_lainnya_3: number;
 }
 
 interface HorizonBudget {
@@ -188,12 +201,22 @@ export function FinanceAnalysis() {
   const [preview, setPreview] = useState<AnalysisResult | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [cashAmount, setCashAmount] = useState<string>('');
   const [runLabel, setRunLabel] = useState<string>('');
   const [skipOverdueKronis, setSkipOverdueKronis] = useState<boolean>(false);
   const [enableIgnoreSuppliers, setEnableIgnoreSuppliers] = useState<boolean>(false);
   const [ignoredSuppliersInput, setIgnoredSuppliersInput] = useState<string>('pjbt, pjb tasik');
   const [useCashForDebt, setUseCashForDebt] = useState<boolean>(false);
+  const [cashBreakdown, setCashBreakdown] = useState({
+    kas_toko: '',
+    bank_bca: '',
+    bank_bri: '',
+    bank_mandiri: '',
+    bank_bni: '',
+    bank_bsi: '',
+    bank_lainnya_1: '',
+    bank_lainnya_2: '',
+    bank_lainnya_3: ''
+  });
   const [activeTab, setActiveTab] = useState<'h15' | 'h30' | 'h45' | 'h60' | 'targets' | 'suppliers'>('h15');
   const [error, setError] = useState<string>('');
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
@@ -237,10 +260,15 @@ export function FinanceAnalysis() {
     setAnalyzing(true);
     setError('');
     try {
+      const totalCash = Object.values(cashBreakdown).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
       const body: any = {};
-      if (cashAmount) body.cash_amount = parseFloat(cashAmount);
+      body.cash_amount = totalCash;
       body.skip_overdue_kronis = skipOverdueKronis;
       body.use_cash_for_debt = useCashForDebt;
+      body.cash_breakdown = Object.entries(cashBreakdown).reduce((acc, [key, val]) => {
+        acc[key] = parseFloat(val) || 0;
+        return acc;
+      }, {} as any);
       
       if (enableIgnoreSuppliers) {
         body.ignored_suppliers = ignoredSuppliersInput
@@ -272,7 +300,8 @@ export function FinanceAnalysis() {
         cash_amount: preview.cash_position.current_cash,
         skip_overdue_kronis: preview.options?.skip_overdue_kronis,
         ignored_suppliers: preview.options?.ignored_suppliers || [],
-        use_cash_for_debt: preview.options?.use_cash_for_debt
+        use_cash_for_debt: preview.options?.use_cash_for_debt,
+        cash_breakdown: preview.cash_breakdown
       };
 
       const data = await api.post<AnalysisResult>(`/finance/analysis-runs/${selectedGroup}/save`, body);
@@ -561,31 +590,62 @@ export function FinanceAnalysis() {
           Jalankan Analisa
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              Modal Kas Terkini (Rp)
-            </label>
-            <input
-              type="number"
-              value={cashAmount}
-              onChange={e => setCashAmount(e.target.value)}
-              placeholder="Opsional — isi jika ingin update"
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              Label (Opsional)
-            </label>
-            <input
-              type="text"
-              value={runLabel}
-              onChange={e => setRunLabel(e.target.value)}
-              placeholder="Mis: Analisa Pagi"
-              className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
+        {/* Cash Account Breakdown Table */}
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2.5">
+            Rincian Kas Awal (Modal)
+          </label>
+          <div className="bg-gray-55/60 dark:bg-gray-800/10 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { key: 'kas_toko', label: 'Kas Toko (Cash)' },
+                { key: 'bank_bca', label: 'Bank BCA' },
+                { key: 'bank_bri', label: 'Bank BRI' },
+                { key: 'bank_mandiri', label: 'Bank Mandiri' },
+                { key: 'bank_bni', label: 'Bank BNI' },
+                { key: 'bank_bsi', label: 'Bank BSI' },
+                { key: 'bank_lainnya_1', label: 'Lainnya 1' },
+                { key: 'bank_lainnya_2', label: 'Lainnya 2' },
+                { key: 'bank_lainnya_3', label: 'Lainnya 3' },
+              ].map((item) => (
+                <div key={item.key}>
+                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                    {item.label}
+                  </label>
+                  <input
+                    type="number"
+                    value={cashBreakdown[item.key as keyof typeof cashBreakdown]}
+                    onChange={(e) => setCashBreakdown({
+                      ...cashBreakdown,
+                      [item.key]: e.target.value
+                    })}
+                    placeholder="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3.5 border-t border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-gray-700 dark:text-gray-300">Total Kas Awal:</span>
+                <span className="font-black text-blue-600 dark:text-blue-400 text-base animate-pulse-slow">
+                  {formatCurrency(Object.values(cashBreakdown).reduce((sum, val) => sum + (parseFloat(val) || 0), 0))}
+                </span>
+              </div>
+              
+              <div className="w-full sm:w-72">
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  Label Analisa (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={runLabel}
+                  onChange={e => setRunLabel(e.target.value)}
+                  placeholder="Mis: Analisa Pagi"
+                  className="w-full px-3.5 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -880,6 +940,42 @@ export function FinanceAnalysis() {
               </p>
             </div>
           </div>
+
+          {/* Cash Breakdown Display */}
+          {(preview || result)?.cash_breakdown && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+              <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3.5 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Rincian Kas Awal (Modal)
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { key: 'kas_toko', label: 'Kas Toko' },
+                  { key: 'bank_bca', label: 'BCA' },
+                  { key: 'bank_bri', label: 'BRI' },
+                  { key: 'bank_mandiri', label: 'Mandiri' },
+                  { key: 'bank_bni', label: 'BNI' },
+                  { key: 'bank_bsi', label: 'BSI' },
+                  { key: 'bank_lainnya_1', label: 'Lainnya 1' },
+                  { key: 'bank_lainnya_2', label: 'Lainnya 2' },
+                  { key: 'bank_lainnya_3', label: 'Lainnya 3' },
+                ].map((item) => {
+                  const val = (preview || result)?.cash_breakdown?.[item.key as keyof CashBreakdown] || 0;
+                  if (val === 0) return null;
+                  return (
+                    <div key={item.key} className="bg-gray-55/60 dark:bg-gray-800/20 p-3 rounded-xl border border-gray-105 dark:border-gray-800/80 text-center">
+                      <span className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        {item.label}
+                      </span>
+                      <span className="block text-xs font-black text-gray-800 dark:text-gray-100 mt-1">
+                        {formatCurrency(val)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tab Switcher */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
