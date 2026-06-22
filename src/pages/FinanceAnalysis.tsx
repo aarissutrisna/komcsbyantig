@@ -124,6 +124,7 @@ interface AnalysisResult {
   options?: {
     skip_overdue_kronis?: boolean;
     ignored_suppliers?: string[];
+    use_cash_for_debt?: boolean;
   };
   horizon_budgets?: {
     h15: HorizonBudget;
@@ -192,6 +193,7 @@ export function FinanceAnalysis() {
   const [skipOverdueKronis, setSkipOverdueKronis] = useState<boolean>(false);
   const [enableIgnoreSuppliers, setEnableIgnoreSuppliers] = useState<boolean>(false);
   const [ignoredSuppliersInput, setIgnoredSuppliersInput] = useState<string>('pjbt, pjb tasik');
+  const [useCashForDebt, setUseCashForDebt] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'h15' | 'h30' | 'h45' | 'h60' | 'targets' | 'suppliers'>('h15');
   const [error, setError] = useState<string>('');
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
@@ -238,6 +240,7 @@ export function FinanceAnalysis() {
       const body: any = {};
       if (cashAmount) body.cash_amount = parseFloat(cashAmount);
       body.skip_overdue_kronis = skipOverdueKronis;
+      body.use_cash_for_debt = useCashForDebt;
       
       if (enableIgnoreSuppliers) {
         body.ignored_suppliers = ignoredSuppliersInput
@@ -268,7 +271,8 @@ export function FinanceAnalysis() {
         run_label: runLabel || `Analisa ${new Date().toLocaleDateString('id-ID')}`,
         cash_amount: preview.cash_position.current_cash,
         skip_overdue_kronis: preview.options?.skip_overdue_kronis,
-        ignored_suppliers: preview.options?.ignored_suppliers || []
+        ignored_suppliers: preview.options?.ignored_suppliers || [],
+        use_cash_for_debt: preview.options?.use_cash_for_debt
       };
 
       const data = await api.post<AnalysisResult>(`/finance/analysis-runs/${selectedGroup}/save`, body);
@@ -491,6 +495,12 @@ export function FinanceAnalysis() {
                 <span className="text-red-600 dark:text-red-400 font-bold">Defisit Kas: {formatCurrency(Math.abs(safe))}</span>
               </div>
             )}
+            {res.options?.use_cash_for_debt && (
+              <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
+                <div className="w-3 h-3 bg-blue-500 rounded" />
+                <span>Termasuk Kas Awal: {formatCurrency(res.cash_position.current_cash)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -582,9 +592,9 @@ export function FinanceAnalysis() {
         {/* Modern Filter Options */}
         <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-800 mb-6">
           <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-            Opsi Filter Analisa
+            Opsi Filter & Parameter Analisa
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div 
               onClick={() => setSkipOverdueKronis(!skipOverdueKronis)}
               className={`p-4 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
@@ -643,7 +653,7 @@ export function FinanceAnalysis() {
               {enableIgnoreSuppliers && (
                 <div className="w-full mt-2" onClick={(e) => e.stopPropagation()}>
                   <label className="block text-[11px] font-bold text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-1">
-                    Daftar Kode / Kata Kunci Supplier (pisahkan dengan koma)
+                    Daftar Kode / Kata Kunci Supplier
                   </label>
                   <input
                     type="text"
@@ -654,6 +664,33 @@ export function FinanceAnalysis() {
                   />
                 </div>
               )}
+            </div>
+
+            <div 
+              onClick={() => setUseCashForDebt(!useCashForDebt)}
+              className={`p-4 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
+                useCashForDebt 
+                  ? 'border-blue-500 bg-blue-50/40 dark:bg-blue-900/10' 
+                  : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 hover:bg-gray-100/50 dark:bg-gray-800/30 dark:hover:bg-gray-800/50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={useCashForDebt}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setUseCashForDebt(e.target.checked);
+                }}
+                className="mt-1 w-4 h-4 rounded text-blue-600 border-gray-300 dark:border-gray-700 focus:ring-blue-500 cursor-pointer"
+              />
+              <div>
+                <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">
+                  Gunakan Kas Awal (Net Target)
+                </span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Gunakan kas awal yang diinput untuk langsung memotong target hutang dan menambah budget aman.
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -726,7 +763,8 @@ export function FinanceAnalysis() {
             if (!data?.options) return null;
             const hasSkipKronis = data.options.skip_overdue_kronis;
             const hasIgnoredSuppliers = data.options.ignored_suppliers && data.options.ignored_suppliers.length > 0;
-            if (!hasSkipKronis && !hasIgnoredSuppliers) return null;
+            const hasUseCashForDebt = data.options.use_cash_for_debt;
+            if (!hasSkipKronis && !hasIgnoredSuppliers && !hasUseCashForDebt) return null;
             
             const excludedItems = [
               hasSkipKronis && "Overdue Kronis",
@@ -741,10 +779,11 @@ export function FinanceAnalysis() {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-amber-850 dark:text-amber-300">
-                      Analisa Keuangan Dijalankan dengan Filter Aktif
+                      Analisa Keuangan Dijalankan dengan Parameter Khusus
                     </h4>
                     <p className="text-xs text-amber-700 dark:text-amber-450 mt-0.5 animate-pulse-slow">
-                      Hasil kalkulasi di bawah ini mengecualikan: {excludedItems}.
+                      {excludedItems && `Hasil kalkulasi di bawah ini mengecualikan: ${excludedItems}.`}
+                      {hasUseCashForDebt && `${excludedItems ? " Selain itu, k" : "K"}as awal diperhitungkan sebagai modal (mengurangi target harian & menambah budget aman).`}
                     </p>
                   </div>
                 </div>

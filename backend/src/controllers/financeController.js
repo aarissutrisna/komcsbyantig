@@ -78,7 +78,7 @@ export const updateGroupSettings = async (req, res) => {
 export const previewAnalysis = async (req, res) => {
   try {
     const { groupKey } = req.params;
-    const { cash_amount, skip_overdue_kronis, ignored_suppliers } = req.body;
+    const { cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt } = req.body;
 
     const group = await financeGroupService.getGroupByKey(groupKey);
     if (!group) {
@@ -92,7 +92,8 @@ export const previewAnalysis = async (req, res) => {
       cash_amount,
       {
         skipOverdueKronis: skip_overdue_kronis,
-        ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : []
+        ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : [],
+        useCashForDebt: !!use_cash_for_debt
       },
       false // Don't save to DB
     );
@@ -110,7 +111,7 @@ export const previewAnalysis = async (req, res) => {
 export const saveAnalysis = async (req, res) => {
   try {
     const { groupKey } = req.params;
-    const { run_label, cash_amount, skip_overdue_kronis, ignored_suppliers } = req.body;
+    const { run_label, cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt } = req.body;
 
     const group = await financeGroupService.getGroupByKey(groupKey);
     if (!group) {
@@ -124,7 +125,8 @@ export const saveAnalysis = async (req, res) => {
       cash_amount,
       {
         skipOverdueKronis: skip_overdue_kronis,
-        ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : []
+        ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : [],
+        useCashForDebt: !!use_cash_for_debt
       },
       true // Save to DB
     );
