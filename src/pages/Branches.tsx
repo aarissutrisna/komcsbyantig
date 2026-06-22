@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
-import { Building2, MapPin, Target, Database, Plus, Pencil, Trash2, Globe, TrendingUp } from 'lucide-react';
+import { Building2, MapPin, Target, Database, Plus, Pencil, Trash2, Globe, TrendingUp, Link2, CheckCircle2, AlertCircle, Users, RefreshCw } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 
 interface Branch {
@@ -16,7 +16,22 @@ interface Branch {
   comm_perc_max: string;
   n8n_endpoint: string | null;
   n8n_secret: string | null;
+  n8n_debt_endpoint: string | null;
+  n8n_debt_secret: string | null;
+  finance_group_key: string | null;
   last_sync_at: string | null;
+}
+
+interface DebtWebhookInfo {
+  n8n_debt_endpoint: string | null;
+  n8n_debt_secret: string | null;
+  finance_group_key: string | null;
+  finance_group: {
+    group_name: string;
+    branch_count: number;
+    branch_ids: string;
+  } | null;
+  siblings: Array<{ id: string; name: string }>;
 }
 
 export function Branches() {
@@ -35,6 +50,17 @@ export function Branches() {
     n8n_endpoint: '',
     n8n_secret: ''
   });
+
+  // Debt webhook state
+  const [debtWebhookData, setDebtWebhookData] = useState<DebtWebhookInfo | null>(null);
+  const [debtFormData, setDebtFormData] = useState({
+    n8n_debt_endpoint: '',
+    n8n_debt_secret: ''
+  });
+  const [isDebtWebhookTab, setIsDebtWebhookTab] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [savingDebtWebhook, setSavingDebtWebhook] = useState(false);
 
   useEffect(() => {
     fetchBranches();
@@ -64,10 +90,14 @@ export function Branches() {
       n8n_endpoint: '',
       n8n_secret: ''
     });
+    setIsDebtWebhookTab(false);
+    setDebtWebhookData(null);
+    setDebtFormData({ n8n_debt_endpoint: '', n8n_debt_secret: '' });
+    setConnectionResult(null);
     setIsModalOpen(true);
   };
 
-  const openEditModal = (branch: Branch) => {
+  const openEditModal = async (branch: Branch) => {
     setEditingBranch(branch);
     setFormData({
       id: branch.id,
@@ -80,6 +110,20 @@ export function Branches() {
       n8n_endpoint: branch.n8n_endpoint || '',
       n8n_secret: branch.n8n_secret || ''
     });
+    // Reset debt webhook tab
+    setIsDebtWebhookTab(false);
+    setDebtFormData({
+      n8n_debt_endpoint: branch.n8n_debt_endpoint || '',
+      n8n_debt_secret: branch.n8n_debt_secret || ''
+    });
+    setConnectionResult(null);
+    // Fetch debt webhook info
+    try {
+      const data = await api.get<DebtWebhookInfo>(`/branches/${branch.id}/debt-webhook`);
+      setDebtWebhookData(data);
+    } catch {
+      setDebtWebhookData(null);
+    }
     setIsModalOpen(true);
   };
 
@@ -114,6 +158,63 @@ export function Branches() {
       fetchBranches();
     } catch (err) {
       alert('Gagal menghapus cabang');
+    }
+  };
+
+  const handleSaveDebtWebhook = async () => {
+    if (!editingBranch) return;
+    setSavingDebtWebhook(true);
+    setConnectionResult(null);
+    try {
+      const result = await api.put<{
+        success: boolean;
+        synced_branches: string[];
+        finance_group_key: string | null;
+        finance_group_name: string | null;
+        message: string;
+      }>(`/branches/${editingBranch.id}/debt-webhook`, debtFormData);
+
+      if (result.success) {
+        let msg = result.message;
+        if (result.synced_branches.length > 0) {
+          msg += `\n\nSecret otomatis disinkronkan ke cabang: ${result.synced_branches.join(', ')}`;
+        }
+        alert(msg);
+        // Refresh debt webhook info
+        const data = await api.get<DebtWebhookInfo>(`/branches/${editingBranch.id}/debt-webhook`);
+        setDebtWebhookData(data);
+        // Refresh branches list
+        fetchBranches();
+      }
+    } catch (err: any) {
+      alert(`Gagal menyimpan webhook hutang: ${err.message}`);
+    } finally {
+      setSavingDebtWebhook(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!editingBranch) return;
+    setTestingConnection(true);
+    setConnectionResult(null);
+    try {
+      const result = await api.post<{ success: boolean; message: string; data?: any }>(
+        `/branches/${editingBranch.id}/debt-webhook/test`,
+        {}
+      );
+      setConnectionResult({
+        success: result.success,
+        message: result.success
+          ? `Koneksi berhasil! ${result.data?.total_suppliers || 0} supplier, ${result.data?.total_invoices || 0} invoice ditemukan.`
+          : result.message
+      });
+    } catch (err: any) {
+      setConnectionResult({
+        success: false,
+        message: err.message || 'Gagal test koneksi'
+      });
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -224,7 +325,14 @@ export function Branches() {
                   {branch.n8n_endpoint && (
                     <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 text-[10px] text-gray-500 truncate">
                       <Globe className="w-3 h-3 flex-shrink-0 text-blue-400" />
-                      <span className="truncate">{branch.n8n_endpoint}</span>
+                      <span className="truncate">Omzet: {branch.n8n_endpoint}</span>
+                    </div>
+                  )}
+
+                  {branch.n8n_debt_endpoint && (
+                    <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-900/30 text-[10px] text-indigo-600 dark:text-indigo-400 truncate">
+                      <Link2 className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">Hutang: {branch.n8n_debt_endpoint}</span>
                     </div>
                   )}
                 </div>
@@ -254,17 +362,60 @@ export function Branches() {
             >
               Batal
             </button>
-            <button
-              form="branch-form"
-              type="submit"
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-            >
-              Simpan
-            </button>
+            {isDebtWebhookTab ? (
+              <button
+                type="button"
+                onClick={handleSaveDebtWebhook}
+                disabled={savingDebtWebhook}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+              >
+                {savingDebtWebhook ? 'Menyimpan...' : 'Simpan Webhook Hutang'}
+              </button>
+            ) : (
+              <button
+                form="branch-form"
+                type="submit"
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+              >
+                Simpan
+              </button>
+            )}
           </div>
         }
       >
-        <form id="branch-form" onSubmit={handleSave} className="space-y-4" noValidate>
+        {/* Tab Switcher */}
+        {editingBranch && (
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 -mt-2">
+            <button
+              type="button"
+              onClick={() => setIsDebtWebhookTab(false)}
+              className={`px-4 py-2 text-sm font-bold transition-colors ${
+                !isDebtWebhookTab
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Data Cabang
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDebtWebhookTab(true)}
+              className={`px-4 py-2 text-sm font-bold transition-colors ${
+                isDebtWebhookTab
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5" />
+                Webhook Hutang
+              </span>
+            </button>
+          </div>
+        )}
+
+        {!isDebtWebhookTab ? (
+          <form id="branch-form" onSubmit={handleSave} className="space-y-4" noValidate>
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Kode Cabang (ID)</label>
             <input
@@ -368,7 +519,118 @@ export function Branches() {
               placeholder="Kosongkan untuk pakai rahasia Global (.env)"
             />
           </div>
-        </form>
+          </form>
+        ) : (
+          /* Debt Webhook Section */
+          <div className="space-y-4">
+            {/* Finance Group Info */}
+            {debtWebhookData?.finance_group && (
+              <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-sm font-bold text-indigo-800 dark:text-indigo-400">
+                    Finance Group: {debtWebhookData.finance_group.group_name}
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-600 dark:text-indigo-500">
+                  {debtWebhookData.finance_group.branch_count} cabang dalam group: {debtWebhookData.finance_group.branch_ids}
+                </p>
+                {debtWebhookData.siblings.length > 0 && (
+                  <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                    Secret akan otomatis disinkronkan ke: {debtWebhookData.siblings.map(s => s.name).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Webhook URL Input */}
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                URL Webhook Hutang
+              </label>
+              <input
+                type="url"
+                value={debtFormData.n8n_debt_endpoint}
+                onChange={(e) => setDebtFormData({ ...debtFormData, n8n_debt_endpoint: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                placeholder="http://192.168.100.12:5678/webhook/hutang-rinci"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Cabang dengan URL webhook yang sama akan digabung dalam 1 analisa keuangan.
+              </p>
+            </div>
+
+            {/* Secret Input */}
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                Secret Token
+              </label>
+              <input
+                type="text"
+                value={debtFormData.n8n_debt_secret}
+                onChange={(e) => setDebtFormData({ ...debtFormData, n8n_debt_secret: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                placeholder="Kosongkan jika sama dengan secret omzet"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Secret ini akan otomatis disinkronkan ke semua cabang dengan URL webhook yang sama.
+              </p>
+            </div>
+
+            {/* Test Connection Button */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={testingConnection || !debtFormData.n8n_debt_endpoint}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testingConnection ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Globe className="w-4 h-4" />
+                    Test Koneksi
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Connection Result */}
+            {connectionResult && (
+              <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+                connectionResult.success
+                  ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30'
+                  : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30'
+              }`}>
+                {connectionResult.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                )}
+                <p className={`text-sm ${
+                  connectionResult.success
+                    ? 'text-green-800 dark:text-green-400'
+                    : 'text-red-800 dark:text-red-400'
+                }`}>
+                  {connectionResult.message}
+                </p>
+              </div>
+            )}
+
+            {/* Info Box */}
+            {!debtFormData.n8n_debt_endpoint && (
+              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4">
+                <p className="text-xs text-amber-800 dark:text-amber-400">
+                  <strong>Catatan:</strong> Webhook hutang belum dikonfigurasi. Analisa keuangan tidak dapat dijalankan untuk cabang ini sampai webhook diatur.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

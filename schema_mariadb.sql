@@ -47,8 +47,12 @@ CREATE TABLE `branches` (
   `comm_perc_min` decimal(5,2) DEFAULT 0.20,
   `comm_perc_max` decimal(5,2) DEFAULT 0.40,
   `n8n_secret` varchar(255) DEFAULT NULL,
+  `n8n_debt_endpoint` varchar(500) DEFAULT NULL COMMENT 'URL webhook N8N untuk fetch data hutang supplier',
+  `n8n_debt_secret` varchar(255) DEFAULT NULL COMMENT 'Secret token untuk auth ke webhook hutang',
+  `finance_group_key` varchar(64) GENERATED ALWAYS AS (CASE WHEN n8n_debt_endpoint IS NOT NULL THEN SHA2(n8n_debt_endpoint, 256) ELSE NULL END) STORED,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
+  UNIQUE KEY `name` (`name`),
+  KEY `idx_branches_finance_group` (`finance_group_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 -- Table: commission_mutations
@@ -298,5 +302,79 @@ CREATE TABLE `bonus_transfer_claim_items` (
   KEY `fk_claim_items_claim` (`claim_id`),
   CONSTRAINT `fk_claim_items_claim` FOREIGN KEY (`claim_id`) REFERENCES `bonus_transfer_claims` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- ============================================
+-- Finance Analysis Module Tables
+-- Added: 2026-06-21
+-- ============================================
+
+-- Finance Group Settings
+DROP TABLE IF EXISTS `finance_group_settings`;
+CREATE TABLE `finance_group_settings` (
+  `finance_group_key` varchar(64) NOT NULL,
+  `webhook_url` varchar(500) NOT NULL,
+  `webhook_secret` varchar(255) DEFAULT NULL,
+  `opex_percent` decimal(5,2) DEFAULT 2.00,
+  `safety_margin_percent` decimal(5,2) DEFAULT 15.00,
+  `n_days_default` int(11) DEFAULT 90,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`finance_group_key`),
+  CONSTRAINT `fk_fgs_branches` FOREIGN KEY (`finance_group_key`) REFERENCES `branches` (`finance_group_key`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Finance Cash Position
+DROP TABLE IF EXISTS `finance_cash_position`;
+CREATE TABLE `finance_cash_position` (
+  `id` char(36) NOT NULL,
+  `finance_group_key` varchar(64) NOT NULL,
+  `cash_amount` decimal(15,2) NOT NULL,
+  `recorded_date` date NOT NULL,
+  `input_by` char(36) DEFAULT NULL,
+  `notes` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_group_date` (`finance_group_key`, `recorded_date`),
+  KEY `idx_fcp_group` (`finance_group_key`),
+  CONSTRAINT `fk_fcp_branches` FOREIGN KEY (`finance_group_key`) REFERENCES `branches` (`finance_group_key`) ON DELETE CASCADE,
+  CONSTRAINT `fk_fcp_user` FOREIGN KEY (`input_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Finance Analysis Runs
+DROP TABLE IF EXISTS `finance_analysis_runs`;
+CREATE TABLE `finance_analysis_runs` (
+  `id` char(36) NOT NULL,
+  `finance_group_key` varchar(64) NOT NULL,
+  `triggered_by` char(36) DEFAULT NULL,
+  `run_label` varchar(150) DEFAULT NULL,
+  `cash_position_used` decimal(15,2) DEFAULT NULL,
+  `avg_daily_revenue` decimal(15,2) DEFAULT NULL,
+  `result_json` json NOT NULL,
+  `source_debt_snapshot` json DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_far_group` (`finance_group_key`),
+  KEY `idx_far_created` (`created_at` DESC),
+  CONSTRAINT `fk_far_branches` FOREIGN KEY (`finance_group_key`) REFERENCES `branches` (`finance_group_key`) ON DELETE CASCADE,
+  CONSTRAINT `fk_far_user` FOREIGN KEY (`triggered_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Finance Alerts
+DROP TABLE IF EXISTS `finance_alerts`;
+CREATE TABLE `finance_alerts` (
+  `id` char(36) NOT NULL,
+  `finance_group_key` varchar(64) NOT NULL,
+  `analysis_run_id` char(36) DEFAULT NULL,
+  `alert_type` enum('deficit_bucket','runway_critical','high_concentration') DEFAULT NULL,
+  `message` text DEFAULT NULL,
+  `severity` enum('warning','critical') DEFAULT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_fa_group` (`finance_group_key`),
+  KEY `idx_fa_read` (`is_read`, `created_at` DESC),
+  CONSTRAINT `fk_fa_branches` FOREIGN KEY (`finance_group_key`) REFERENCES `branches` (`finance_group_key`) ON DELETE CASCADE,
+  CONSTRAINT `fk_fa_run` FOREIGN KEY (`analysis_run_id`) REFERENCES `finance_analysis_runs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

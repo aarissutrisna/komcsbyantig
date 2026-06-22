@@ -1,3 +1,92 @@
+## Update 22 Juni 2026: Modul Analisa Keuangan & Target N-Hari
+--UPDATE_HOOK:22062026>DATABASE--
+
+#### SQL Migrasi (jalankan di server sebelum pull):
+```sql
+-- 1. Tambah kolom ke tabel branches
+ALTER TABLE branches ADD COLUMN n8n_debt_endpoint VARCHAR(500) DEFAULT NULL COMMENT "URL webhook N8N untuk fetch data hutang supplier";
+ALTER TABLE branches ADD COLUMN n8n_debt_secret VARCHAR(255) DEFAULT NULL COMMENT "Secret token untuk auth ke webhook hutang";
+ALTER TABLE branches ADD COLUMN finance_group_key VARCHAR(64) GENERATED ALWAYS AS (CASE WHEN n8n_debt_endpoint IS NOT NULL THEN SHA2(n8n_debt_endpoint, 256) ELSE NULL END) STORED;
+ALTER TABLE branches ADD INDEX idx_branches_finance_group (finance_group_key);
+
+-- 2. Buat tabel finance_group_settings
+CREATE TABLE IF NOT EXISTS finance_group_settings (
+  finance_group_key VARCHAR(64) NOT NULL,
+  webhook_url VARCHAR(500) NOT NULL,
+  webhook_secret VARCHAR(255) DEFAULT NULL,
+  opex_percent DECIMAL(5,2) DEFAULT 2.00,
+  safety_margin_percent DECIMAL(5,2) DEFAULT 15.00,
+  n_days_default INT DEFAULT 90,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (finance_group_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Buat tabel finance_cash_position
+CREATE TABLE IF NOT EXISTS finance_cash_position (
+  id CHAR(36) NOT NULL,
+  finance_group_key VARCHAR(64) NOT NULL,
+  cash_amount DECIMAL(15,2) NOT NULL,
+  recorded_date DATE NOT NULL,
+  input_by CHAR(36),
+  notes VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_group_date (finance_group_key, recorded_date),
+  INDEX idx_fcp_group (finance_group_key),
+  CONSTRAINT fk_fcp_user FOREIGN KEY (input_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4. Buat tabel finance_analysis_runs
+CREATE TABLE IF NOT EXISTS finance_analysis_runs (
+  id CHAR(36) NOT NULL,
+  finance_group_key VARCHAR(64) NOT NULL,
+  triggered_by CHAR(36),
+  run_label VARCHAR(150),
+  cash_position_used DECIMAL(15,2),
+  avg_daily_revenue DECIMAL(15,2),
+  result_json JSON NOT NULL,
+  source_debt_snapshot JSON,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_far_group (finance_group_key),
+  INDEX idx_far_created (created_at DESC),
+  CONSTRAINT fk_far_user FOREIGN KEY (triggered_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. Buat tabel finance_alerts
+CREATE TABLE IF NOT EXISTS finance_alerts (
+  id CHAR(36) NOT NULL,
+  finance_group_key VARCHAR(64) NOT NULL,
+  analysis_run_id CHAR(36),
+  alert_type ENUM('deficit_bucket','runway_critical','high_concentration'),
+  message TEXT,
+  severity ENUM('warning','critical'),
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_fa_group (finance_group_key),
+  INDEX idx_fa_read (is_read, created_at DESC),
+  CONSTRAINT fk_fa_run FOREIGN KEY (analysis_run_id) REFERENCES finance_analysis_runs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 6. Setup endpoint webhook awal untuk cabang UTM, JTJ, dan TSM
+UPDATE branches 
+SET n8n_debt_endpoint = 'https://n8n123.puncakjb.id/webhook/hutang-rinci-utm'
+WHERE id IN ('UTM', 'JTJ');
+
+UPDATE branches 
+SET n8n_debt_endpoint = 'https://n8n123.puncakjb.id/webhook/hutang-rinci-tsm'
+WHERE id = 'TSM';
+```
+
+> **Deploy**:
+> 1. Jalankan SQL migrasi di atas pada database produksi.
+> 2. Lakukan sync repository: `git pull origin main`
+> 3. Lakukan build frontend: `npm run build`
+> 4. Restart aplikasi: `pm2 restart all`
+
+---
+
 ## Update 21 Juni 2026: Fitur Klaim Bonus Transfer Item
 --UPDATE_HOOK:21062026>DATABASE--
 

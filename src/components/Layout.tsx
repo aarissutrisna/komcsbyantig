@@ -19,6 +19,7 @@ import {
   BarChart3,
   ArrowLeftRight,
   ClipboardCheck,
+  TrendingUp,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -57,6 +58,12 @@ export function Layout({ children }: LayoutProps) {
       items: [
         { name: 'Transfer Bonus', href: '/transfer-bonus', icon: ArrowLeftRight, roles: ['admin', 'hrd', 'cs'] },
         { name: 'Klaim Bonus', href: '/claimed-bonus', icon: ClipboardCheck, roles: ['admin', 'hrd', 'cs'] },
+      ]
+    },
+    {
+      title: 'Keuangan',
+      items: [
+        { name: 'Analisa Keuangan', href: '/finance/analysis', icon: TrendingUp, roles: ['admin', 'owner'] },
       ]
     },
     {

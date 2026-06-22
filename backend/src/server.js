@@ -18,6 +18,7 @@ import omzetAnalysisRoutes from './routes/omzetAnalysisRoutes.js';
 import * as schedulerService from './services/schedulerService.js';
 import transferBonusRoutes from './routes/transferBonusRoutes.js';
 import bonusClaimsRoutes from './routes/bonusClaimsRoutes.js';
+import financeRoutes from './routes/financeRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,7 @@ app.use('/api/stable', stableRoutes);
 app.use('/api/omzet-analysis', omzetAnalysisRoutes);
 app.use('/api/transfer-bonus', transferBonusRoutes);
 app.use('/api/bonus-claims', bonusClaimsRoutes);
+app.use('/api/finance', financeRoutes);
 
 // Catch-all route for SPA handling
 app.get('*', (req, res, next) => {

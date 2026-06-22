@@ -16,6 +16,7 @@ import { TargetAnalysis } from './pages/TargetAnalysis';
 import LandingPage from './pages/LandingPage';
 import { TransferBonus } from './pages/TransferBonus';
 import { ClaimedBonusTransfer } from './pages/ClaimedBonusTransfer';
+import { FinanceAnalysis } from './pages/FinanceAnalysis';
 
 const App: React.FC = () => {
   return (
@@ -121,6 +122,16 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <Layout>
                     <ClaimedBonusTransfer />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/finance/analysis"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                  <Layout>
+                    <FinanceAnalysis />
                   </Layout>
                 </ProtectedRoute>
               }
