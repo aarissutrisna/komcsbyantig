@@ -4,10 +4,10 @@
 #### SQL Migrasi (jalankan di server sebelum pull):
 ```sql
 -- 1. Tambah kolom ke tabel branches
-ALTER TABLE branches ADD COLUMN n8n_debt_endpoint VARCHAR(500) DEFAULT NULL COMMENT "URL webhook N8N untuk fetch data hutang supplier";
-ALTER TABLE branches ADD COLUMN n8n_debt_secret VARCHAR(255) DEFAULT NULL COMMENT "Secret token untuk auth ke webhook hutang";
-ALTER TABLE branches ADD COLUMN finance_group_key VARCHAR(64) GENERATED ALWAYS AS (CASE WHEN n8n_debt_endpoint IS NOT NULL THEN SHA2(n8n_debt_endpoint, 256) ELSE NULL END) STORED;
-ALTER TABLE branches ADD INDEX idx_branches_finance_group (finance_group_key);
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS n8n_debt_endpoint VARCHAR(500) DEFAULT NULL COMMENT "URL webhook N8N untuk fetch data hutang supplier";
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS n8n_debt_secret VARCHAR(255) DEFAULT NULL COMMENT "Secret token untuk auth ke webhook hutang";
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS finance_group_key VARCHAR(64) GENERATED ALWAYS AS (CASE WHEN n8n_debt_endpoint IS NOT NULL THEN SHA2(n8n_debt_endpoint, 256) ELSE NULL END) STORED;
+ALTER TABLE branches ADD INDEX IF NOT EXISTS idx_branches_finance_group (finance_group_key);
 
 -- 2. Buat tabel finance_group_settings
 CREATE TABLE IF NOT EXISTS finance_group_settings (
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS finance_cash_position (
   UNIQUE KEY uk_group_date (finance_group_key, recorded_date),
   INDEX idx_fcp_group (finance_group_key),
   CONSTRAINT fk_fcp_user FOREIGN KEY (input_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Buat tabel finance_analysis_runs
 CREATE TABLE IF NOT EXISTS finance_analysis_runs (
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS finance_analysis_runs (
   INDEX idx_far_group (finance_group_key),
   INDEX idx_far_created (created_at DESC),
   CONSTRAINT fk_far_user FOREIGN KEY (triggered_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. Buat tabel finance_alerts
 CREATE TABLE IF NOT EXISTS finance_alerts (
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS finance_alerts (
   INDEX idx_fa_group (finance_group_key),
   INDEX idx_fa_read (is_read, created_at DESC),
   CONSTRAINT fk_fa_run FOREIGN KEY (analysis_run_id) REFERENCES finance_analysis_runs(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Setup endpoint webhook awal untuk cabang UTM, JTJ, dan TSM
 UPDATE branches 
