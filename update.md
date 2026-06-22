@@ -1,4 +1,19 @@
 ## Update 22 Juni 2026: Modul Analisa Keuangan & Target N-Hari
+
+Rilis ini menambahkan Modul Analisa Keuangan untuk memproyeksikan arus kas (cash flow) treasury perusahaan dan menganalisis serta mengelola kewajiban hutang supplier.
+
+### 1. Modul Analisa Keuangan & Arus Kas
+* **Rincian Kas Awal (Modal)**: Form input terperinci berisi 9 akun (Kas Toko + 8 rekening bank/lainnya) yang disusun dalam layout 3x3 kolom dan baris.
+* **Proyeksi Kas & Budget Pembelian Aman**: Visualisasi dan perhitungan budget pembelian aman pada horizon 15, 30, 45, dan 60 hari. Dilengkapi dengan status kelayakan kas (AMAN, WASPADA, DEFISIT).
+* **Cash Runway & Analisa Likuiditas**: Menghitung sisa waktu bertahannya kas perusahaan (runway) berdasarkan cash flow harian bersih dan tanggal kritis kehabisan kas.
+
+### 2. Metode Amortisasi Hutang Merata (Horizon N-Hari)
+* Menggantikan target harian iPOS yang spikey. Hutang yang overdue dan jatuh tempo disebar merata sepanjang periode horizon treasury (15, 30, 45, 60 hari) untuk memberikan target yang lebih stabil dan rasional.
+* Penambahan opsi filter:
+  - **Skip Overdue Kronis**: Mengabaikan hutang berumur >90 hari.
+  - **Skip Supplier Khusus**: Mengabaikan transaksi dari supplier tertentu (misal: PJBT).
+  - **Gunakan Kas Awal**: Memperhitungkan saldo kas awal sebagai modal pengurang target hutang.
+
 --UPDATE_HOOK:22062026>DATABASE--
 
 #### SQL Migrasi (jalankan di server sebelum pull):
