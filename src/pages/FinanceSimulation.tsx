@@ -80,13 +80,16 @@ interface CalculationResult {
   };
   daily: {
     debt_target_today: number;
-    target_15d: number;
-    target_30d: number;
-    target_45d: number;
-    target_60d: number;
+    target_15d?: number;
+    target_30d?: number;
+    target_45d?: number;
+    target_60d?: number;
+    target_m0?: number;
+    target_m1?: number;
+    target_m2?: number;
     target_custom?: number;
     custom_days?: number;
-    horizons?: HorizonDetail[];
+    horizons?: (HorizonDetail & { label?: string; active_days?: number })[];
   };
   biweekly_buckets: Array<{
     label: string;
@@ -150,10 +153,13 @@ interface CalculationResult {
     }>;
   };
   horizon_budgets: {
-    h15: HorizonBudget;
-    h30: HorizonBudget;
-    h45: HorizonBudget;
-    h60: HorizonBudget;
+    h15?: HorizonBudget;
+    h30?: HorizonBudget;
+    h45?: HorizonBudget;
+    h60?: HorizonBudget;
+    hm0?: HorizonBudget;
+    hm1?: HorizonBudget;
+    hm2?: HorizonBudget;
     hn?: HorizonBudget;
   };
   options?: {
@@ -161,6 +167,7 @@ interface CalculationResult {
     ignored_suppliers: string[];
     use_cash_for_debt: boolean;
     n_days?: number;
+    holidays?: { m0: number; m1: number; m2: number };
   };
 }
 
@@ -831,22 +838,28 @@ export function FinanceSimulation() {
                   
                   <div className="space-y-3">
                     {(() => {
-                      const list = [
-                        { label: 'Horizon 15 Hari', key: 'target_15d' as const },
-                        { label: 'Horizon 30 Hari', key: 'target_30d' as const },
-                        { label: 'Horizon 45 Hari', key: 'target_45d' as const },
-                        { label: 'Horizon 60 Hari', key: 'target_60d' as const },
-                      ];
+                      const list: Array<{ label: string; key: 'target_m0' | 'target_m1' | 'target_m2' | 'target_15d' | 'target_30d' | 'target_45d' | 'target_60d' | 'target_custom' }> = [];
+                      
+                      if (simResults.daily.target_m0 !== undefined) {
+                        list.push({ label: simResults.daily.horizons?.[0]?.label || 'Bulan Ini (M0)', key: 'target_m0' as const });
+                        list.push({ label: simResults.daily.horizons?.[1]?.label || 'Bulan Depan (M1)', key: 'target_m1' as const });
+                        list.push({ label: simResults.daily.horizons?.[2]?.label || '2 Bulan Depan (M2)', key: 'target_m2' as const });
+                      } else {
+                        if (simResults.daily.target_15d !== undefined) list.push({ label: 'Horizon 15 Hari', key: 'target_15d' as const });
+                        if (simResults.daily.target_30d !== undefined) list.push({ label: 'Horizon 30 Hari', key: 'target_30d' as const });
+                        if (simResults.daily.target_45d !== undefined) list.push({ label: 'Horizon 45 Hari', key: 'target_45d' as const });
+                        if (simResults.daily.target_60d !== undefined) list.push({ label: 'Horizon 60 Hari', key: 'target_60d' as const });
+                      }
+
                       if (simResults.daily.target_custom !== undefined && simResults.daily.custom_days !== undefined) {
                         const cDays = simResults.daily.custom_days;
-                        if (![15, 30, 45, 60].includes(cDays)) {
-                          list.push({ label: `Horizon Kustom ${cDays} Hari`, key: 'target_custom' as const });
-                        }
+                        list.push({ label: `Horizon Kustom ${cDays} Hari`, key: 'target_custom' as const });
                       }
+
                       return list;
                     })().map((hor) => {
-                      const beforeVal = baselineDetail?.daily[hor.key] || 0;
-                      const afterVal = simResults.daily[hor.key] || 0;
+                      const beforeVal = (baselineDetail?.daily[hor.key] as number) || 0;
+                      const afterVal = (simResults.daily[hor.key] as number) || 0;
                       const diff = afterVal - beforeVal;
 
                       return (
@@ -931,16 +944,24 @@ export function FinanceSimulation() {
 
                   <div className="space-y-4">
                     {(() => {
-                      const list = [
-                        { name: '15 Hari (H15)', key: 'h15' as const },
-                        { name: '30 Hari (H30)', key: 'h30' as const },
-                        { name: '45 Hari (H45)', key: 'h45' as const },
-                        { name: '60 Hari (H60)', key: 'h60' as const },
-                      ];
+                      const list: Array<{ name: string; key: 'hm0' | 'hm1' | 'hm2' | 'h15' | 'h30' | 'h45' | 'h60' | 'hn' }> = [];
+                      
+                      if (simResults.horizon_budgets.hm0) {
+                        list.push({ name: simResults.daily.horizons?.[0]?.label || 'Bulan Ini (M0)', key: 'hm0' as const });
+                        list.push({ name: simResults.daily.horizons?.[1]?.label || 'Bulan Depan (M1)', key: 'hm1' as const });
+                        list.push({ name: simResults.daily.horizons?.[2]?.label || '2 Bulan Depan (M2)', key: 'hm2' as const });
+                      } else {
+                        if (simResults.horizon_budgets.h15) list.push({ name: '15 Hari (H15)', key: 'h15' as const });
+                        if (simResults.horizon_budgets.h30) list.push({ name: '30 Hari (H30)', key: 'h30' as const });
+                        if (simResults.horizon_budgets.h45) list.push({ name: '45 Hari (H45)', key: 'h45' as const });
+                        if (simResults.horizon_budgets.h60) list.push({ name: '60 Hari (H60)', key: 'h60' as const });
+                      }
+
                       const customDays = simResults.daily.custom_days || 90;
-                      if (simResults.horizon_budgets.hn && ![15, 30, 45, 60].includes(customDays)) {
+                      if (simResults.horizon_budgets.hn) {
                         list.push({ name: `${customDays} Hari (Kustom - HN)`, key: 'hn' as const });
                       }
+                      
                       return list;
                     })().map((h) => {
                       const beforeHorizon = baselineDetail?.horizon_budgets?.[h.key];

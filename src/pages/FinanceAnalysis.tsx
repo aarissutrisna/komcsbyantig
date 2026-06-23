@@ -51,7 +51,12 @@ interface AnalysisResult {
     target_30d?: number;
     target_45d?: number;
     target_60d?: number;
-    horizons?: HorizonDetail[];
+    target_m0?: number;
+    target_m1?: number;
+    target_m2?: number;
+    target_custom?: number;
+    custom_days?: number;
+    horizons?: (HorizonDetail & { label?: string; active_days?: number })[];
   };
   biweekly_buckets: Array<{
     label: string;
@@ -125,12 +130,18 @@ interface AnalysisResult {
     skip_overdue_kronis?: boolean;
     ignored_suppliers?: string[];
     use_cash_for_debt?: boolean;
+    n_days?: number;
+    holidays?: { m0: number; m1: number; m2: number };
   };
   horizon_budgets?: {
-    h15: HorizonBudget;
-    h30: HorizonBudget;
-    h45: HorizonBudget;
-    h60: HorizonBudget;
+    h15?: HorizonBudget;
+    h30?: HorizonBudget;
+    h45?: HorizonBudget;
+    h60?: HorizonBudget;
+    hm0?: HorizonBudget;
+    hm1?: HorizonBudget;
+    hm2?: HorizonBudget;
+    hn?: HorizonBudget;
   };
   cash_breakdown?: CashBreakdown | null;
 }
@@ -207,6 +218,9 @@ export function FinanceAnalysis() {
   const [ignoredSuppliersInput, setIgnoredSuppliersInput] = useState<string>('pjbt, pjb tasik');
   const [useCashForDebt, setUseCashForDebt] = useState<boolean>(false);
   const [customDays, setCustomDays] = useState<string>('90');
+  const [holidayM0, setHolidayM0] = useState<string>('0');
+  const [holidayM1, setHolidayM1] = useState<string>('0');
+  const [holidayM2, setHolidayM2] = useState<string>('0');
   const [cashBreakdown, setCashBreakdown] = useState({
     kas_toko: '',
     bank_bca: '',
@@ -218,7 +232,7 @@ export function FinanceAnalysis() {
     bank_lainnya_2: '',
     bank_lainnya_3: ''
   });
-  const [activeTab, setActiveTab] = useState<'h15' | 'h30' | 'h45' | 'h60' | 'hn' | 'targets' | 'suppliers'>('h15');
+  const [activeTab, setActiveTab] = useState<'hm0' | 'hm1' | 'hm2' | 'hn' | 'targets' | 'suppliers'>('hm0');
   const [error, setError] = useState<string>('');
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
 
@@ -267,6 +281,11 @@ export function FinanceAnalysis() {
       body.skip_overdue_kronis = skipOverdueKronis;
       body.use_cash_for_debt = useCashForDebt;
       body.n_days = parseInt(customDays) || 90;
+      body.holidays = {
+        m0: parseInt(holidayM0) || 0,
+        m1: parseInt(holidayM1) || 0,
+        m2: parseInt(holidayM2) || 0
+      };
       body.cash_breakdown = Object.entries(cashBreakdown).reduce((acc, [key, val]) => {
         acc[key] = parseFloat(val) || 0;
         return acc;
@@ -304,7 +323,8 @@ export function FinanceAnalysis() {
         ignored_suppliers: preview.options?.ignored_suppliers || [],
         use_cash_for_debt: preview.options?.use_cash_for_debt,
         cash_breakdown: preview.cash_breakdown,
-        n_days: preview.options?.n_days || parseInt(customDays) || 90
+        n_days: preview.options?.n_days || parseInt(customDays) || 90,
+        holidays: preview.options?.holidays
       };
 
       const data = await api.post<AnalysisResult>(`/finance/analysis-runs/${selectedGroup}/save`, body);
@@ -331,6 +351,15 @@ export function FinanceAnalysis() {
       setResult(data);
       if (data.options?.n_days) {
         setCustomDays(data.options.n_days.toString());
+      }
+      if (data.options?.holidays) {
+        setHolidayM0(data.options.holidays.m0.toString());
+        setHolidayM1(data.options.holidays.m1.toString());
+        setHolidayM2(data.options.holidays.m2.toString());
+      } else {
+        setHolidayM0('0');
+        setHolidayM1('0');
+        setHolidayM2('0');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
@@ -378,9 +407,17 @@ export function FinanceAnalysis() {
 
   const selectedGroupData = groups.find(g => g.finance_group_key === selectedGroup);
 
-  const renderHorizonTabContent = (horizonKey: 'h15' | 'h30' | 'h45' | 'h60' | 'hn', label: string) => {
+  const renderHorizonTabContent = (horizonKey: 'hm0' | 'hm1' | 'hm2' | 'hn', label: string) => {
     const res = (preview || result)!;
     
+    const getDaysUntilEndOfMonthFront = (offset: number) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + offset + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
+      return Math.max(1, Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+    };
+
     const getFallbackBudget = (days: number, targetValue?: number) => {
       const opexPercent = 2.00;
       const safetyMarginPercent = 15.00;
@@ -401,10 +438,9 @@ export function FinanceAnalysis() {
     };
 
     const budget = res.horizon_budgets?.[horizonKey] || (() => {
-      if (horizonKey === 'h15') return getFallbackBudget(15, res.daily.target_15d);
-      if (horizonKey === 'h30') return getFallbackBudget(30, res.daily.target_30d);
-      if (horizonKey === 'h45') return getFallbackBudget(45, res.daily.target_45d);
-      if (horizonKey === 'h60') return getFallbackBudget(60, res.daily.target_60d);
+      if (horizonKey === 'hm0') return getFallbackBudget(getDaysUntilEndOfMonthFront(0), res.daily.target_m0);
+      if (horizonKey === 'hm1') return getFallbackBudget(getDaysUntilEndOfMonthFront(1), res.daily.target_m1);
+      if (horizonKey === 'hm2') return getFallbackBudget(getDaysUntilEndOfMonthFront(2), res.daily.target_m2);
       return getFallbackBudget(res.daily.custom_days || 90, res.daily.target_custom);
     })();
 
@@ -784,6 +820,67 @@ export function FinanceAnalysis() {
               </div>
             </div>
           </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <label className="block text-xs font-bold text-gray-450 dark:text-gray-550 uppercase tracking-wider mb-3">
+              Asumsi Libur / Hari Non-Aktif (Pengurang Hari Kerja Omzet)
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
+                <div>
+                  <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">Bulan Ini (M0)</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Asumsi toko libur/tutup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="31"
+                    value={holidayM0}
+                    onChange={(e) => setHolidayM0(e.target.value)}
+                    className="w-16 px-2 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-center text-gray-800 dark:text-gray-200"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Hari</span>
+                </div>
+              </div>
+              
+              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
+                <div>
+                  <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">Bulan Depan (M1)</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Asumsi toko libur/tutup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="31"
+                    value={holidayM1}
+                    onChange={(e) => setHolidayM1(e.target.value)}
+                    className="w-16 px-2 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-center text-gray-800 dark:text-gray-200"
+                  />
+                  <span className="text-xs text-gray-550 dark:text-gray-450">Hari</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
+                <div>
+                  <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">2 Bulan Depan (M2)</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Asumsi toko libur/tutup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="31"
+                    value={holidayM2}
+                    onChange={(e) => setHolidayM2(e.target.value)}
+                    className="w-16 px-2 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-center text-gray-800 dark:text-gray-200"
+                  />
+                  <span className="text-xs text-gray-550 dark:text-gray-450">Hari</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">
@@ -904,43 +1001,65 @@ export function FinanceAnalysis() {
                   <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                  Target Harian (30 Hari)
+                  Target Harian (M0 - Bulan Ini)
                 </span>
               </div>
               <div className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-                {formatCurrency((preview || result)!.daily.target_30d || (preview || result)!.daily.debt_target_today)}
+                {formatCurrency((preview || result)!.daily.target_m0 || (preview || result)!.daily.target_30d || (preview || result)!.daily.debt_target_today)}
               </div>
               
-              {((preview || result)!.daily.target_15d !== undefined) && (
-                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span>Target 15 Hari:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {formatCurrency((preview || result)!.daily.target_15d!)}/hari
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Target 45 Hari:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {formatCurrency((preview || result)!.daily.target_45d!)}/hari
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Target 60 Hari:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {formatCurrency((preview || result)!.daily.target_60d!)}/hari
-                    </span>
-                  </div>
-                  {((preview || result)!.daily.target_custom !== undefined) && (
-                    <div className="flex justify-between items-center text-blue-600 dark:text-blue-400 font-bold border-t border-dashed border-gray-150 dark:border-gray-800 pt-1.5 mt-1.5">
-                      <span>Target {((preview || result)!.daily.custom_days)} Hari (Kustom):</span>
-                      <span>
-                        {formatCurrency((preview || result)!.daily.target_custom!)}/hari
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 space-y-1.5">
+                {/* Fallback support for old run history keys if loaded */}
+                {((preview || result)!.daily.target_15d !== undefined) && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span>Target 15 Hari:</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {formatCurrency((preview || result)!.daily.target_15d!)}/hari
                       </span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="flex justify-between items-center">
+                      <span>Target 45 Hari:</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {formatCurrency((preview || result)!.daily.target_45d!)}/hari
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Target 60 Hari:</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {formatCurrency((preview || result)!.daily.target_60d!)}/hari
+                      </span>
+                    </div>
+                  </>
+                )}
+                
+                {/* Month-based horizons (M1 & M2) */}
+                {((preview || result)!.daily.target_m1 !== undefined) && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span>Bulan Depan (M1):</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {formatCurrency((preview || result)!.daily.target_m1!)}/hari
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>2 Bulan Depan (M2):</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {formatCurrency((preview || result)!.daily.target_m2!)}/hari
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {((preview || result)!.daily.target_custom !== undefined) && (
+                  <div className="flex justify-between items-center text-blue-600 dark:text-blue-400 font-bold border-t border-dashed border-gray-150 dark:border-gray-800 pt-1.5 mt-1.5">
+                    <span>Target {((preview || result)!.daily.custom_days)} Hari (Kustom):</span>
+                    <span>
+                      {formatCurrency((preview || result)!.daily.target_custom!)}/hari
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
@@ -1020,7 +1139,7 @@ export function FinanceAnalysis() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
             <div className="border-b border-gray-200 dark:border-gray-800">
               <nav className="flex">
-                 {(['h15', 'h30', 'h45', 'h60', 'hn', 'targets', 'suppliers'] as const).map(tab => (
+                {(['hm0', 'hm1', 'hm2', 'hn', 'targets', 'suppliers'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -1030,14 +1149,12 @@ export function FinanceAnalysis() {
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
-                    {tab === 'h15'
-                      ? '15 Hari'
-                      : tab === 'h30'
-                      ? '30 Hari'
-                      : tab === 'h45'
-                      ? '45 Hari'
-                      : tab === 'h60'
-                      ? '60 Hari'
+                    {tab === 'hm0'
+                      ? `${(preview || result)?.daily.horizons?.[0]?.label || 'Bulan Ini (M0)'}`
+                      : tab === 'hm1'
+                      ? `${(preview || result)?.daily.horizons?.[1]?.label || 'Bulan Depan (M1)'}`
+                      : tab === 'hm2'
+                      ? `${(preview || result)?.daily.horizons?.[2]?.label || '2 Bulan Depan (M2)'}`
                       : tab === 'hn'
                       ? `${(preview || result)?.options?.n_days || 90} Hari (Kustom)`
                       : tab === 'targets'
@@ -1049,10 +1166,9 @@ export function FinanceAnalysis() {
             </div>
 
             <div className="p-6">
-              {activeTab === 'h15' && renderHorizonTabContent('h15', '15 Hari')}
-              {activeTab === 'h30' && renderHorizonTabContent('h30', '30 Hari')}
-              {activeTab === 'h45' && renderHorizonTabContent('h45', '45 Hari')}
-              {activeTab === 'h60' && renderHorizonTabContent('h60', '60 Hari')}
+              {activeTab === 'hm0' && renderHorizonTabContent('hm0', (preview || result)?.daily.horizons?.[0]?.label || 'Bulan Ini (M0)')}
+              {activeTab === 'hm1' && renderHorizonTabContent('hm1', (preview || result)?.daily.horizons?.[1]?.label || 'Bulan Depan (M1)')}
+              {activeTab === 'hm2' && renderHorizonTabContent('hm2', (preview || result)?.daily.horizons?.[2]?.label || '2 Bulan Depan (M2)')}
               {activeTab === 'hn' && renderHorizonTabContent('hn', `${(preview || result)?.options?.n_days || 90} Hari (Kustom)`)}
 
               {activeTab === 'targets' && (
@@ -1068,8 +1184,8 @@ export function FinanceAnalysis() {
                       </h4>
                       <p className="text-xs text-blue-700 dark:text-blue-400 mt-1 leading-relaxed">
                         Model ini menghitung target harian yang stabil berdasarkan horizon waktu perencanaan treasury.
-                        Formula: <code className="bg-blue-100/60 dark:bg-blue-950/60 px-1 py-0.5 rounded font-mono font-semibold text-blue-800 dark:text-blue-300">Target Harian = (Hutang Overdue + Hutang Jatuh Tempo dalam N Hari) / N Hari</code>.
-                        Hal ini menghindari lonjakan target harian (spikes) akibat penumpukan jatuh tempo jangka pendek.
+                        Formula: <code className="bg-blue-100/60 dark:bg-blue-950/60 px-1 py-0.5 rounded font-mono font-semibold text-blue-800 dark:text-blue-300">Target Harian = (Hutang Overdue + Hutang Jatuh Tempo dalam Horizon) / Hari Kerja Aktif</code>.
+                        Hari Kerja Aktif dihitung dari hari kalender dikurangi asumsi libur yang diinput admin.
                       </p>
                     </div>
                   </div>
@@ -1097,16 +1213,25 @@ export function FinanceAnalysis() {
                             : 0;
                           
                           const getUpcoming = (total: number) => Math.max(0, total - overdue);
-                          const t15 = (res.daily.target_15d || 0) * 15;
-                          const t30 = (res.daily.target_30d || 0) * 30;
-                          const t45 = (res.daily.target_45d || 0) * 45;
-                          const t60 = (res.daily.target_60d || 0) * 60;
+                          const getDaysUntilEndOfMonthFront = (offset: number) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const lastDay = new Date(today.getFullYear(), today.getMonth() + offset + 1, 0);
+                            lastDay.setHours(23, 59, 59, 999);
+                            return Math.max(1, Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+                          };
+
+                          const daysM0 = getDaysUntilEndOfMonthFront(0);
+                          const daysM1 = getDaysUntilEndOfMonthFront(1);
+                          const daysM2 = getDaysUntilEndOfMonthFront(2);
+                          const tm0 = (res.daily.target_m0 || 0) * daysM0;
+                          const tm1 = (res.daily.target_m1 || 0) * daysM1;
+                          const tm2 = (res.daily.target_m2 || 0) * daysM2;
 
                           const horizons = res.daily.horizons || [
-                            { days: 15, overdue_debt: overdue, upcoming_debt: getUpcoming(t15), total_debt: t15, daily_target: res.daily.target_15d || 0 },
-                            { days: 30, overdue_debt: overdue, upcoming_debt: getUpcoming(t30), total_debt: t30, daily_target: res.daily.target_30d || 0 },
-                            { days: 45, overdue_debt: overdue, upcoming_debt: getUpcoming(t45), total_debt: t45, daily_target: res.daily.target_45d || 0 },
-                            { days: 60, overdue_debt: overdue, upcoming_debt: getUpcoming(t60), total_debt: t60, daily_target: res.daily.target_60d || 0 },
+                            { days: daysM0, overdue_debt: overdue, upcoming_debt: getUpcoming(tm0), total_debt: tm0, daily_target: res.daily.target_m0 || 0, label: 'Bulan Ini (M0)' },
+                            { days: daysM1, overdue_debt: overdue, upcoming_debt: getUpcoming(tm1), total_debt: tm1, daily_target: res.daily.target_m1 || 0, label: 'Bulan Depan (M1)' },
+                            { days: daysM2, overdue_debt: overdue, upcoming_debt: getUpcoming(tm2), total_debt: tm2, daily_target: res.daily.target_m2 || 0, label: '2 Bulan Depan (M2)' },
                           ];
 
                           const avgRevenue = res.avg_daily_revenue || 1;
@@ -1127,7 +1252,7 @@ export function FinanceAnalysis() {
                             return (
                               <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
                                 <td className="py-3 px-4 font-bold text-gray-900 dark:text-white">
-                                  Horizon {horizon.days} Hari
+                                  {horizon.label || `Horizon ${horizon.days} Hari`}
                                 </td>
                                 <td className="py-3 px-4 text-right text-gray-700 dark:text-gray-300">
                                   {formatCurrency(horizon.overdue_debt)}
@@ -1139,7 +1264,7 @@ export function FinanceAnalysis() {
                                   {formatCurrency(horizon.total_debt)}
                                 </td>
                                 <td className="py-3 px-4 text-center text-gray-700 dark:text-gray-300">
-                                  {horizon.days} Hari
+                                  {horizon.active_days !== undefined ? `${horizon.active_days} / ${horizon.days} Hari` : `${horizon.days} Hari`}
                                 </td>
                                 <td className="py-3 px-4 text-right font-bold text-blue-600 dark:text-blue-400">
                                   {formatCurrency(horizon.daily_target)}

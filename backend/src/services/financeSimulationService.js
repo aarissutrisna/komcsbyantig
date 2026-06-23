@@ -9,7 +9,8 @@ import {
   calculateMonthlyBudget,
   calculateBudgetForHorizon,
   calculateCashRunway,
-  buildSupplierReport
+  buildSupplierReport,
+  getDaysUntilEndOfMonth
 } from './financeAnalysisService.js';
 
 /**
@@ -35,8 +36,9 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
 
   // 3. Extract baseline options
   const parsedResult = typeof run.result_json === 'string' ? JSON.parse(run.result_json) : run.result_json;
-  const { skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, n_days } = parsedResult.options || {};
+  const { skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, n_days, holidays } = parsedResult.options || {};
   const customDays = parseInt(n_days) || settings?.n_days_default || 90;
+  const simHolidays = holidays || { m0: 0, m1: 0, m2: 0 };
 
   // 4. Reconstruct baseline real debts from the snapshot
   const snapshot = typeof run.source_debt_snapshot === 'string' 
@@ -87,18 +89,21 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
   // 7. Combine real and simulated debts
   const combinedDebts = [...debts, ...simulatedDebtsTransformed];
 
+  const daysM0 = getDaysUntilEndOfMonth(0);
+  const daysM1 = getDaysUntilEndOfMonth(1);
+  const daysM2 = getDaysUntilEndOfMonth(2);
+
   // 8. Run calculations on combined debts
-  const dailyTarget = calculateDailyTarget(combinedDebts, { useCashForDebt: !!use_cash_for_debt, customDays }, run.cash_position_used);
+  const dailyTarget = calculateDailyTarget(combinedDebts, { useCashForDebt: !!use_cash_for_debt, customDays, holidays: simHolidays }, run.cash_position_used);
   const biweeklyBuckets = calculateBiweeklyBuckets(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
   const weeklyBudget = calculateWeeklyBudget(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
   const monthlyBudget = calculateMonthlyBudget(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
   const cashRunway = calculateCashRunway(run.cash_position_used, run.avg_daily_revenue, dailyTarget, opexPercent);
   const agingSummary = calculateAgingSummary(combinedDebts);
   
-  const h15 = calculateBudgetForHorizon(15, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
-  const h30 = calculateBudgetForHorizon(30, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
-  const h45 = calculateBudgetForHorizon(45, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
-  const h60 = calculateBudgetForHorizon(60, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
+  const hm0 = calculateBudgetForHorizon(daysM0, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt, holidaysCount: simHolidays.m0 }, run.cash_position_used);
+  const hm1 = calculateBudgetForHorizon(daysM1, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt, holidaysCount: simHolidays.m0 + simHolidays.m1 }, run.cash_position_used);
+  const hm2 = calculateBudgetForHorizon(daysM2, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt, holidaysCount: simHolidays.m0 + simHolidays.m1 + simHolidays.m2 }, run.cash_position_used);
   const hn = calculateBudgetForHorizon(customDays, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
 
   const supplierReport = buildSupplierReport(combinedDebts);
@@ -122,17 +127,17 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
     aging_summary: agingSummary,
     supplier_report: supplierReport,
     horizon_budgets: {
-      h15,
-      h30,
-      h45,
-      h60,
+      hm0,
+      hm1,
+      hm2,
       hn
     },
     options: {
       skip_overdue_kronis: !!skip_overdue_kronis,
       ignored_suppliers: ignored_suppliers || [],
       use_cash_for_debt: !!use_cash_for_debt,
-      n_days: customDays
+      n_days: customDays,
+      holidays: simHolidays
     }
   };
 };

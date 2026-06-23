@@ -78,7 +78,7 @@ export const updateGroupSettings = async (req, res) => {
 export const previewAnalysis = async (req, res) => {
   try {
     const { groupKey } = req.params;
-    const { cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, cash_breakdown, n_days } = req.body;
+    const { cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, cash_breakdown, n_days, holidays } = req.body;
 
     const group = await financeGroupService.getGroupByKey(groupKey);
     if (!group) {
@@ -95,7 +95,8 @@ export const previewAnalysis = async (req, res) => {
         ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : [],
         useCashForDebt: !!use_cash_for_debt,
         cashBreakdown: cash_breakdown,
-        nDays: parseInt(n_days) || null
+        nDays: parseInt(n_days) || null,
+        holidays
       },
       false // Don't save to DB
     );
@@ -113,7 +114,7 @@ export const previewAnalysis = async (req, res) => {
 export const saveAnalysis = async (req, res) => {
   try {
     const { groupKey } = req.params;
-    const { run_label, cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, cash_breakdown, n_days } = req.body;
+    const { run_label, cash_amount, skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, cash_breakdown, n_days, holidays } = req.body;
 
     const group = await financeGroupService.getGroupByKey(groupKey);
     if (!group) {
@@ -130,7 +131,8 @@ export const saveAnalysis = async (req, res) => {
         ignoredSuppliers: Array.isArray(ignored_suppliers) ? ignored_suppliers : [],
         useCashForDebt: !!use_cash_for_debt,
         cashBreakdown: cash_breakdown,
-        nDays: parseInt(n_days) || null
+        nDays: parseInt(n_days) || null,
+        holidays
       },
       true // Save to DB
     );

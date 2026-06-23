@@ -1,3 +1,24 @@
+## Update 23 Juni 2026 (Sesi 3): Horizon Perencanaan Bulanan (M0, M1, M2) & Asumsi Libur
+
+Rilis ini mengubah horizon perencanaan treasury dan perhitungan target amortisasi hutang dari model hari tetap (15, 30, 45, 60 hari) menjadi model bulanan dinamis (M0, M1, M2) ditambah dengan opsi input Asumsi Hari Libur (Hari Non-Aktif) per bulan.
+
+### 1. Horizon Bulanan Dinamis (M0, M1, M2)
+* **Bulan Ini (M0)**: Proyeksi dari hari ini sampai akhir bulan berjalan.
+* **Bulan Depan (M1)**: Proyeksi dari hari ini sampai akhir bulan berikutnya.
+* **2 Bulan Depan (M2)**: Proyeksi dari hari ini sampai akhir 2 bulan berikutnya.
+* **Nama Bulan Dinamis**: Label tab dan breakdown target menggunakan nama bulan riil terjemahan bahasa Indonesia (misal: "Juni 2026 (M0)").
+
+### 2. Asumsi Hari Libur (Hari Non-Aktif) sebagai Pengurang Hari Kerja
+* Panel input untuk hari libur Bulan Ini (M0), Bulan Depan (M1), dan 2 Bulan Depan (M2) disediakan di panel parameter analisa.
+* **Divisor Aktif**: Hari libur mengurangi hari kalender secara kumulatif untuk mendapatkan hari kerja aktif. Target harian merata dihitung dengan membagi total kewajiban bersih dengan jumlah hari kerja aktif.
+* **Proyeksi Pembelian Aman**: Hari kerja aktif juga digunakan untuk menskalakan proyeksi pemasukan dan opex, sementara kewajiban hutang tetap ditarik penuh hingga akhir horizon kalender.
+
+### 3. Sinkronisasi What-If Simulasi Pembelian
+* Pemuatan baseline analisa otomatis membaca asumsi hari libur (`options.holidays`) dari basis data run baseline.
+* Hasil simulasi menampilkan perbandingan target harian sebelum/sesudah simulasi dan budget aman horizon perencanaan dalam model horizon bulanan (M0, M1, M2) secara konsisten.
+
+---
+
 ## Update 23 Juni 2026 (Sesi 2): Fitur Horizon Proyeksi Kustom N-Hari (Analisa & Simulasi Keuangan)
 
 Rilis ini menambahkan opsi untuk menentukan jangka waktu proyeksi kustom N-Hari (N-Days Horizon) dalam Analisa Keuangan dan Simulasi Pembelian.

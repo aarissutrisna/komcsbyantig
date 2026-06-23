@@ -5,6 +5,34 @@ import { getAvgDailyRevenue } from './financeIncomeService.js';
 import { fetchDebtsFromN8N, transformN8NResponse, calculateAgingSummary } from './financeDebtService.js';
 
 /**
+ * Calculate calendar days from today until the end of target month (current month + offset)
+ */
+export const getDaysUntilEndOfMonth = (offset = 0) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const targetYear = today.getFullYear();
+  const targetMonth = today.getMonth() + offset;
+
+  // Day 0 of next month is the last day of targetMonth
+  const lastDay = new Date(targetYear, targetMonth + 1, 0);
+  lastDay.setHours(23, 59, 59, 999);
+
+  const diffMs = lastDay.getTime() - today.getTime();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, days);
+};
+
+/**
+ * Get dynamic month label in Indonesian
+ */
+export const getMonthLabel = (offset = 0) => {
+  const today = new Date();
+  const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+  return d.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+};
+
+/**
  * Run complete financial analysis for a finance group
  * @param {boolean} saveToDb - If false, only preview without saving
  */
@@ -63,11 +91,19 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
   const cashRunway = calculateCashRunway(cashPositionUsed, avgDailyRevenue, dailyTarget, opexPercent);
   const agingSummary = calculateAgingSummary(debts);
   
-  // Calculate budgets for horizons (15, 30, 45, 60 days)
-  const h15 = calculateBudgetForHorizon(15, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
-  const h30 = calculateBudgetForHorizon(30, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
-  const h45 = calculateBudgetForHorizon(45, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
-  const h60 = calculateBudgetForHorizon(60, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
+  // Calculate dynamic days until end of months and active days
+  const holidayM0 = options.holidays?.m0 || 0;
+  const holidayM1 = options.holidays?.m1 || 0;
+  const holidayM2 = options.holidays?.m2 || 0;
+
+  const daysM0 = getDaysUntilEndOfMonth(0);
+  const daysM1 = getDaysUntilEndOfMonth(1);
+  const daysM2 = getDaysUntilEndOfMonth(2);
+
+  // Calculate budgets for horizons (M0, M1, M2, HN)
+  const hm0 = calculateBudgetForHorizon(daysM0, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, { ...options, holidaysCount: holidayM0 }, cashPositionUsed);
+  const hm1 = calculateBudgetForHorizon(daysM1, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, { ...options, holidaysCount: holidayM0 + holidayM1 }, cashPositionUsed);
+  const hm2 = calculateBudgetForHorizon(daysM2, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, { ...options, holidaysCount: holidayM0 + holidayM1 + holidayM2 }, cashPositionUsed);
   const hn = calculateBudgetForHorizon(customDays, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
 
   // 5. Build supplier detail report
@@ -83,17 +119,21 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
     aging_summary: agingSummary,
     supplier_report: supplierReport,
     horizon_budgets: {
-      h15,
-      h30,
-      h45,
-      h60,
+      hm0,
+      hm1,
+      hm2,
       hn
     },
     options: {
       skip_overdue_kronis: !!skipOverdueKronis,
       ignored_suppliers: ignoredSuppliers || [],
       use_cash_for_debt: !!options.useCashForDebt,
-      n_days: customDays
+      n_days: customDays,
+      holidays: {
+        m0: holidayM0,
+        m1: holidayM1,
+        m2: holidayM2
+      }
     },
     cash_breakdown: options.cashBreakdown || null
   };
@@ -235,8 +275,8 @@ export const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
     }
   }
 
-  // 2. Horizon-based smoothed daily targets (15d, 30d, 45d, 60d)
-  const getTargetForHorizon = (nDays) => {
+  // 2. Horizon-based smoothed daily targets
+  const getTargetForHorizon = (nDays, activeDays, label = '') => {
     const horizonDate = new Date(today);
     horizonDate.setDate(today.getDate() + nDays);
 
@@ -256,10 +296,12 @@ export const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
 
     const totalDebt = overdueDebt + upcomingDebt;
     const netDebt = options.useCashForDebt ? Math.max(0, totalDebt - cashAmount) : totalDebt;
-    const dailyTarget = netDebt / nDays;
+    const dailyTarget = netDebt / activeDays;
 
     return {
       days: nDays,
+      active_days: activeDays,
+      label,
       overdue_debt: Math.round(overdueDebt * 100) / 100,
       upcoming_debt: Math.round(upcomingDebt * 100) / 100,
       total_debt: Math.round(totalDebt * 100) / 100,
@@ -267,23 +309,34 @@ export const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
     };
   };
 
-  const h15 = getTargetForHorizon(15);
-  const h30 = getTargetForHorizon(30);
-  const h45 = getTargetForHorizon(45);
-  const h60 = getTargetForHorizon(60);
+  const holidayM0 = options.holidays?.m0 || 0;
+  const holidayM1 = options.holidays?.m1 || 0;
+  const holidayM2 = options.holidays?.m2 || 0;
+
+  const daysM0 = getDaysUntilEndOfMonth(0);
+  const activeM0 = Math.max(1, daysM0 - holidayM0);
+
+  const daysM1 = getDaysUntilEndOfMonth(1);
+  const activeM1 = Math.max(1, daysM1 - (holidayM0 + holidayM1));
+
+  const daysM2 = getDaysUntilEndOfMonth(2);
+  const activeM2 = Math.max(1, daysM2 - (holidayM0 + holidayM1 + holidayM2));
+
+  const hm0 = getTargetForHorizon(daysM0, activeM0, `${getMonthLabel(0)} (M0)`);
+  const hm1 = getTargetForHorizon(daysM1, activeM1, `${getMonthLabel(1)} (M1)`);
+  const hm2 = getTargetForHorizon(daysM2, activeM2, `${getMonthLabel(2)} (M2)`);
 
   const customDays = parseInt(options.customDays) || 90;
-  const hCustom = getTargetForHorizon(customDays);
+  const hCustom = getTargetForHorizon(customDays, customDays, `Kustom ${customDays} Hari`);
 
   return {
     debt_target_today: Math.round(totalDailyTarget * 100) / 100,
-    target_15d: h15.daily_target,
-    target_30d: h30.daily_target,
-    target_45d: h45.daily_target,
-    target_60d: h60.daily_target,
+    target_m0: hm0.daily_target,
+    target_m1: hm1.daily_target,
+    target_m2: hm2.daily_target,
     target_custom: hCustom.daily_target,
     custom_days: customDays,
-    horizons: [h15, h30, h45, h60, hCustom]
+    horizons: [hm0, hm1, hm2, hCustom]
   };
 };
 
@@ -407,8 +460,11 @@ export const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPer
   const horizonEnd = new Date(today);
   horizonEnd.setDate(today.getDate() + nDays);
 
-  const projectedIncome = avgDailyRevenue * nDays * (1 - safetyMarginPercent / 100);
-  const opex = avgDailyRevenue * nDays * (opexPercent / 100);
+  const holidaysCount = options.holidaysCount || 0;
+  const activeDays = Math.max(1, nDays - holidaysCount);
+
+  const projectedIncome = avgDailyRevenue * activeDays * (1 - safetyMarginPercent / 100);
+  const opex = avgDailyRevenue * activeDays * (opexPercent / 100);
 
   let debtDue = 0;
   for (const debt of debts) {
@@ -428,6 +484,7 @@ export const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPer
 
   return {
     days: nDays,
+    active_days: activeDays,
     projected_income: Math.round(projectedIncome * 100) / 100,
     opex: Math.round(opex * 100) / 100,
     debt_due: Math.round(debtDue * 100) / 100,
@@ -440,7 +497,7 @@ export const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPer
  * Calculate cash runway projection
  */
 export const calculateCashRunway = (currentCash, avgDailyRevenue, dailyTarget, opexPercent) => {
-  const targetForRunway = dailyTarget.target_30d || dailyTarget.debt_target_today;
+  const targetForRunway = dailyTarget.target_m1 || dailyTarget.target_m0 || dailyTarget.debt_target_today;
   const netDailyFlow = avgDailyRevenue * (1 - opexPercent / 100) - targetForRunway;
   
   let criticalDate = null;
