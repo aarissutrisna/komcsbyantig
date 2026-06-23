@@ -1,3 +1,51 @@
+## Update 23 Juni 2026: Spesifikasi Simulasi Pembelian (What-If Treasury Analysis)
+
+Spesifikasi modul baru Simulasi Pembelian untuk melakukan simulasi rencana belanja supplier (*what-if*) tanpa mengubah database aktual.
+
+### 1. Desain Database & Integrasi Baseline
+* **Proteksi Baseline (`ON DELETE RESTRICT`)**: Mencegah penghapusan data run analisa riil (`finance_analysis_runs`) jika data tersebut sedang dirujuk oleh draf simulasi aktif.
+* **Tabel Baru**:
+  - `finance_purchase_simulations`: Menyimpan draf simulasi pembelian.
+  - `finance_simulation_items`: Menyimpan item rincian nota simulasi (Supplier, Nominal, Tempo Hari).
+
+--UPDATE_HOOK:23062026>DATABASE--
+
+#### SQL Migrasi (jalankan di server sebelum pull):
+```sql
+-- 1. Buat tabel finance_purchase_simulations
+CREATE TABLE IF NOT EXISTS finance_purchase_simulations (
+  id CHAR(36) NOT NULL,
+  analysis_run_id CHAR(36) NOT NULL,
+  sim_label VARCHAR(150) NOT NULL,
+  created_by CHAR(36) DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_fps_analysis_run (analysis_run_id),
+  CONSTRAINT fk_fps_analysis_run FOREIGN KEY (analysis_run_id) REFERENCES finance_analysis_runs(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_fps_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. Buat tabel finance_simulation_items
+CREATE TABLE IF NOT EXISTS finance_simulation_items (
+  id INT(11) NOT NULL AUTO_INCREMENT,
+  simulation_id CHAR(36) NOT NULL,
+  supplier_name VARCHAR(150) NOT NULL,
+  invoice_no VARCHAR(100) NOT NULL,
+  amount DECIMAL(15,2) NOT NULL,
+  due_days INT(11) NOT NULL,
+  notes VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_fsi_simulation (simulation_id),
+  CONSTRAINT fk_fsi_simulation FOREIGN KEY (simulation_id) REFERENCES finance_purchase_simulations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+> **Deploy**:
+> 1. Jalankan SQL migrasi di atas pada database produksi.
+> 2. Lakukan sync repository: `git pull origin main`
+
+---
+
 ## Update 22 Juni 2026: Modul Analisa Keuangan & Target N-Hari
 
 Rilis ini menambahkan Modul Analisa Keuangan untuk memproyeksikan arus kas (cash flow) treasury perusahaan dan menganalisis serta mengelola kewajiban hutang supplier.

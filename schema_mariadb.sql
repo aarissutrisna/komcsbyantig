@@ -377,4 +377,34 @@ CREATE TABLE `finance_alerts` (
   CONSTRAINT `fk_fa_run` FOREIGN KEY (`analysis_run_id`) REFERENCES `finance_analysis_runs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table: finance_purchase_simulations
+DROP TABLE IF EXISTS `finance_purchase_simulations`;
+CREATE TABLE `finance_purchase_simulations` (
+  `id` char(36) NOT NULL,
+  `analysis_run_id` char(36) NOT NULL,
+  `sim_label` varchar(150) NOT NULL,
+  `created_by` char(36) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_fps_analysis_run` (`analysis_run_id`),
+  CONSTRAINT `fk_fps_analysis_run` FOREIGN KEY (`analysis_run_id`) REFERENCES `finance_analysis_runs` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fps_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: finance_simulation_items
+DROP TABLE IF EXISTS `finance_simulation_items`;
+CREATE TABLE `finance_simulation_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `simulation_id` char(36) NOT NULL,
+  `supplier_name` varchar(150) NOT NULL,
+  `invoice_no` varchar(100) NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `due_days` int(11) NOT NULL,
+  `notes` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_fsi_simulation` (`simulation_id`),
+  CONSTRAINT `fk_fsi_simulation` FOREIGN KEY (`simulation_id`) REFERENCES `finance_purchase_simulations` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 

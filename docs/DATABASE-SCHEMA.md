@@ -162,6 +162,24 @@ Alert/peringatan defisit kas dari hasil analisa.
 - `is_read` (BOOLEAN)
 - `created_at` (DATETIME)
 
+### `finance_purchase_simulations`
+Draf hasil simulasi pembelian baru (what-if analysis) yang merujuk ke data analisa acuan riil.
+- `id` (VARCHAR 36, UUID - *Primary Key*)
+- `analysis_run_id` (VARCHAR 36, FK ke `finance_analysis_runs` ON DELETE RESTRICT) - Mengunci baseline agar tidak bisa dihapus
+- `sim_label` (VARCHAR 150)
+- `created_by` (VARCHAR 36, FK ke `users`)
+- `created_at` (DATETIME)
+
+### `finance_simulation_items`
+Item nota simulasi di dalam suatu simulasi pembelian.
+- `id` (INT, *Primary Key Auto-Increment*)
+- `simulation_id` (VARCHAR 36, FK ke `finance_purchase_simulations` ON DELETE CASCADE)
+- `supplier_name` (VARCHAR 150)
+- `invoice_no` (VARCHAR 100)
+- `amount` (DECIMAL 15,2)
+- `due_days` (INT) - Tempo hari
+- `notes` (VARCHAR 255)
+
 ---
 
 ## 2. Relasi Antar Tabel
@@ -186,6 +204,8 @@ erDiagram
     users ||--o{ cabang_user_allocation : "allocation"
     users ||--o{ audit_logs : "audits"
     finance_analysis_runs ||--o{ finance_alerts : "contains"
+    finance_analysis_runs ||--o{ finance_purchase_simulations : "baseline for"
+    finance_purchase_simulations ||--o{ finance_simulation_items : "contains"
 ```
 
 ---
