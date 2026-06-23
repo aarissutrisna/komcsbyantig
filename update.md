@@ -1,3 +1,21 @@
+## Update 23 Juni 2026 (Sesi 2): Fitur Horizon Proyeksi Kustom N-Hari (Analisa & Simulasi Keuangan)
+
+Rilis ini menambahkan opsi untuk menentukan jangka waktu proyeksi kustom N-Hari (N-Days Horizon) dalam Analisa Keuangan dan Simulasi Pembelian.
+
+### 1. Kustomisasi Parameter Horizon (Admin Input)
+* **Horizon Kustom (N-Hari)**: Form input kustom berupa input angka (1-365 hari) ditambahkan pada bagian **Opsi Filter & Parameter Analisa** di halaman Analisa Keuangan.
+* **Target Harian Merata Kustom**: Menghitung secara dinamis target harian amortisasi hutang merata berdasarkan jangka waktu `N` hari yang ditentukan (`target_custom` / `custom_days`).
+* **Budget Pembelian Aman Kustom (HN)**: Menambahkan tab horizon perencanaan baru (`hn`) yang menghitung budget pembelian aman untuk jangka waktu kustom `N` hari tersebut.
+
+### 2. Integrasi What-If Simulasi Pembelian
+* **Deteksi Otomatis Baseline**: Simulasi What-If otomatis mendeteksi setting `n_days` kustom yang tersimpan pada baseline run acuan.
+* **Perbandingan Skenario Target & Budget**: Halaman Simulasi Pembelian menampilkan perbandingan target harian merata kustom dan budget aman HN sebelum dan sesudah penambahan nota belanja simulasi.
+
+### 3. Otomatisasi Database & Penyimpanan
+* Nilai `n_days` disimpan di dalam field `result_json->options` di tabel `finance_analysis_runs` sehingga sejarah kalkulasi dan draf simulasi yang memuatnya selalu konsisten.
+
+---
+
 ## Update 23 Juni 2026: Spesifikasi Simulasi Pembelian (What-If Treasury Analysis)
 
 Spesifikasi modul baru Simulasi Pembelian untuk melakukan simulasi rencana belanja supplier (*what-if*) tanpa mengubah database aktual.

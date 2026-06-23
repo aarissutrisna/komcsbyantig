@@ -84,6 +84,8 @@ interface CalculationResult {
     target_30d: number;
     target_45d: number;
     target_60d: number;
+    target_custom?: number;
+    custom_days?: number;
     horizons?: HorizonDetail[];
   };
   biweekly_buckets: Array<{
@@ -152,6 +154,13 @@ interface CalculationResult {
     h30: HorizonBudget;
     h45: HorizonBudget;
     h60: HorizonBudget;
+    hn?: HorizonBudget;
+  };
+  options?: {
+    skip_overdue_kronis: boolean;
+    ignored_suppliers: string[];
+    use_cash_for_debt: boolean;
+    n_days?: number;
   };
 }
 
@@ -821,14 +830,23 @@ export function FinanceSimulation() {
                   </h3>
                   
                   <div className="space-y-3">
-                    {[
-                      { label: 'Horizon 15 Hari', key: 'target_15d' as const },
-                      { label: 'Horizon 30 Hari', key: 'target_30d' as const },
-                      { label: 'Horizon 45 Hari', key: 'target_45d' as const },
-                      { label: 'Horizon 60 Hari', key: 'target_60d' as const },
-                    ].map((hor) => {
+                    {(() => {
+                      const list = [
+                        { label: 'Horizon 15 Hari', key: 'target_15d' as const },
+                        { label: 'Horizon 30 Hari', key: 'target_30d' as const },
+                        { label: 'Horizon 45 Hari', key: 'target_45d' as const },
+                        { label: 'Horizon 60 Hari', key: 'target_60d' as const },
+                      ];
+                      if (simResults.daily.target_custom !== undefined && simResults.daily.custom_days !== undefined) {
+                        const cDays = simResults.daily.custom_days;
+                        if (![15, 30, 45, 60].includes(cDays)) {
+                          list.push({ label: `Horizon Kustom ${cDays} Hari`, key: 'target_custom' as const });
+                        }
+                      }
+                      return list;
+                    })().map((hor) => {
                       const beforeVal = baselineDetail?.daily[hor.key] || 0;
-                      const afterVal = simResults.daily[hor.key];
+                      const afterVal = simResults.daily[hor.key] || 0;
                       const diff = afterVal - beforeVal;
 
                       return (
@@ -912,14 +930,23 @@ export function FinanceSimulation() {
                   </h3>
 
                   <div className="space-y-4">
-                    {([
-                      { name: '15 Hari (H15)', key: 'h15' as const },
-                      { name: '30 Hari (H30)', key: 'h30' as const },
-                      { name: '45 Hari (H45)', key: 'h45' as const },
-                      { name: '60 Hari (H60)', key: 'h60' as const },
-                    ]).map((h) => {
+                    {(() => {
+                      const list = [
+                        { name: '15 Hari (H15)', key: 'h15' as const },
+                        { name: '30 Hari (H30)', key: 'h30' as const },
+                        { name: '45 Hari (H45)', key: 'h45' as const },
+                        { name: '60 Hari (H60)', key: 'h60' as const },
+                      ];
+                      const customDays = simResults.daily.custom_days || 90;
+                      if (simResults.horizon_budgets.hn && ![15, 30, 45, 60].includes(customDays)) {
+                        list.push({ name: `${customDays} Hari (Kustom - HN)`, key: 'hn' as const });
+                      }
+                      return list;
+                    })().map((h) => {
                       const beforeHorizon = baselineDetail?.horizon_budgets?.[h.key];
                       const afterHorizon = simResults.horizon_budgets[h.key];
+                      
+                      if (!afterHorizon) return null;
                       
                       const diffDebt = (afterHorizon?.debt_due || 0) - (beforeHorizon?.debt_due || 0);
                       const diffBudget = (afterHorizon?.safe_purchase_budget || 0) - (beforeHorizon?.safe_purchase_budget || 0);

@@ -206,6 +206,7 @@ export function FinanceAnalysis() {
   const [enableIgnoreSuppliers, setEnableIgnoreSuppliers] = useState<boolean>(false);
   const [ignoredSuppliersInput, setIgnoredSuppliersInput] = useState<string>('pjbt, pjb tasik');
   const [useCashForDebt, setUseCashForDebt] = useState<boolean>(false);
+  const [customDays, setCustomDays] = useState<string>('90');
   const [cashBreakdown, setCashBreakdown] = useState({
     kas_toko: '',
     bank_bca: '',
@@ -217,7 +218,7 @@ export function FinanceAnalysis() {
     bank_lainnya_2: '',
     bank_lainnya_3: ''
   });
-  const [activeTab, setActiveTab] = useState<'h15' | 'h30' | 'h45' | 'h60' | 'targets' | 'suppliers'>('h15');
+  const [activeTab, setActiveTab] = useState<'h15' | 'h30' | 'h45' | 'h60' | 'hn' | 'targets' | 'suppliers'>('h15');
   const [error, setError] = useState<string>('');
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null);
 
@@ -265,6 +266,7 @@ export function FinanceAnalysis() {
       body.cash_amount = totalCash;
       body.skip_overdue_kronis = skipOverdueKronis;
       body.use_cash_for_debt = useCashForDebt;
+      body.n_days = parseInt(customDays) || 90;
       body.cash_breakdown = Object.entries(cashBreakdown).reduce((acc, [key, val]) => {
         acc[key] = parseFloat(val) || 0;
         return acc;
@@ -301,7 +303,8 @@ export function FinanceAnalysis() {
         skip_overdue_kronis: preview.options?.skip_overdue_kronis,
         ignored_suppliers: preview.options?.ignored_suppliers || [],
         use_cash_for_debt: preview.options?.use_cash_for_debt,
-        cash_breakdown: preview.cash_breakdown
+        cash_breakdown: preview.cash_breakdown,
+        n_days: preview.options?.n_days || parseInt(customDays) || 90
       };
 
       const data = await api.post<AnalysisResult>(`/finance/analysis-runs/${selectedGroup}/save`, body);
@@ -326,6 +329,9 @@ export function FinanceAnalysis() {
         return;
       }
       setResult(data);
+      if (data.options?.n_days) {
+        setCustomDays(data.options.n_days.toString());
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError(err.message || 'Gagal memuat detail analisa.');
@@ -372,7 +378,7 @@ export function FinanceAnalysis() {
 
   const selectedGroupData = groups.find(g => g.finance_group_key === selectedGroup);
 
-  const renderHorizonTabContent = (horizonKey: 'h15' | 'h30' | 'h45' | 'h60', label: string) => {
+  const renderHorizonTabContent = (horizonKey: 'h15' | 'h30' | 'h45' | 'h60' | 'hn', label: string) => {
     const res = (preview || result)!;
     
     const getFallbackBudget = (days: number, targetValue?: number) => {
@@ -398,7 +404,8 @@ export function FinanceAnalysis() {
       if (horizonKey === 'h15') return getFallbackBudget(15, res.daily.target_15d);
       if (horizonKey === 'h30') return getFallbackBudget(30, res.daily.target_30d);
       if (horizonKey === 'h45') return getFallbackBudget(45, res.daily.target_45d);
-      return getFallbackBudget(60, res.daily.target_60d);
+      if (horizonKey === 'h60') return getFallbackBudget(60, res.daily.target_60d);
+      return getFallbackBudget(res.daily.custom_days || 90, res.daily.target_custom);
     })();
 
     const income = budget.projected_income;
@@ -654,7 +661,7 @@ export function FinanceAnalysis() {
           <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
             Opsi Filter & Parameter Analisa
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div 
               onClick={() => setSkipOverdueKronis(!skipOverdueKronis)}
               className={`p-4 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
@@ -750,6 +757,30 @@ export function FinanceAnalysis() {
                 <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   Gunakan kas awal yang diinput untuk langsung memotong target hutang dan menambah budget aman.
                 </span>
+              </div>
+            </div>
+
+            <div 
+              className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex flex-col justify-between"
+            >
+              <div>
+                <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">
+                  Horizon Kustom (N-Hari)
+                </span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-2">
+                  Atur jangka waktu perencanaan kustom untuk target harian & budget aman.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                  className="w-24 px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-center text-gray-800 dark:text-gray-200"
+                />
+                <span className="text-xs text-gray-500 dark:text-gray-400">Hari</span>
               </div>
             </div>
           </div>
@@ -900,6 +931,14 @@ export function FinanceAnalysis() {
                       {formatCurrency((preview || result)!.daily.target_60d!)}/hari
                     </span>
                   </div>
+                  {((preview || result)!.daily.target_custom !== undefined) && (
+                    <div className="flex justify-between items-center text-blue-600 dark:text-blue-400 font-bold border-t border-dashed border-gray-150 dark:border-gray-800 pt-1.5 mt-1.5">
+                      <span>Target {((preview || result)!.daily.custom_days)} Hari (Kustom):</span>
+                      <span>
+                        {formatCurrency((preview || result)!.daily.target_custom!)}/hari
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -981,7 +1020,7 @@ export function FinanceAnalysis() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
             <div className="border-b border-gray-200 dark:border-gray-800">
               <nav className="flex">
-                {(['h15', 'h30', 'h45', 'h60', 'targets', 'suppliers'] as const).map(tab => (
+                 {(['h15', 'h30', 'h45', 'h60', 'hn', 'targets', 'suppliers'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -999,6 +1038,8 @@ export function FinanceAnalysis() {
                       ? '45 Hari'
                       : tab === 'h60'
                       ? '60 Hari'
+                      : tab === 'hn'
+                      ? `${(preview || result)?.options?.n_days || 90} Hari (Kustom)`
                       : tab === 'targets'
                       ? 'Target Harian'
                       : 'Rincian Supplier'}
@@ -1012,6 +1053,7 @@ export function FinanceAnalysis() {
               {activeTab === 'h30' && renderHorizonTabContent('h30', '30 Hari')}
               {activeTab === 'h45' && renderHorizonTabContent('h45', '45 Hari')}
               {activeTab === 'h60' && renderHorizonTabContent('h60', '60 Hari')}
+              {activeTab === 'hn' && renderHorizonTabContent('hn', `${(preview || result)?.options?.n_days || 90} Hari (Kustom)`)}
 
               {activeTab === 'targets' && (
                 <div className="space-y-6">

@@ -17,7 +17,10 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
   const settings = await getGroupSettings(financeGroupKey);
   const opexPercent = settings?.opex_percent || 2.00;
   const safetyMarginPercent = settings?.safety_margin_percent || 15.00;
-  const nDays = settings?.n_days_default || 90;
+  
+  // Custom N days requested by admin
+  const customDays = parseInt(options.nDays) || settings?.n_days_default || 90;
+  const fetchWindow = Math.max(90, customDays);
 
   // 1. Get or save cash position
   let cashPositionUsed = cashAmount;
@@ -30,7 +33,7 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
   }
 
   // 2. Fetch debt data from N8N
-  const n8nResponse = await fetchDebtsFromN8N(financeGroupKey, nDays);
+  const n8nResponse = await fetchDebtsFromN8N(financeGroupKey, fetchWindow);
   let debts = transformN8NResponse(n8nResponse);
 
   // Apply filters
@@ -53,7 +56,7 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
   const avgDailyRevenue = await getAvgDailyRevenue(financeGroupKey, 30);
 
   // 4. Run all calculations
-  const dailyTarget = calculateDailyTarget(debts, options, cashPositionUsed);
+  const dailyTarget = calculateDailyTarget(debts, { ...options, customDays }, cashPositionUsed);
   const biweeklyBuckets = calculateBiweeklyBuckets(debts, avgDailyRevenue, opexPercent, safetyMarginPercent);
   const weeklyBudget = calculateWeeklyBudget(debts, avgDailyRevenue, opexPercent, safetyMarginPercent);
   const monthlyBudget = calculateMonthlyBudget(debts, avgDailyRevenue, opexPercent, safetyMarginPercent);
@@ -65,6 +68,7 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
   const h30 = calculateBudgetForHorizon(30, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
   const h45 = calculateBudgetForHorizon(45, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
   const h60 = calculateBudgetForHorizon(60, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
+  const hn = calculateBudgetForHorizon(customDays, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options, cashPositionUsed);
 
   // 5. Build supplier detail report
   const supplierReport = buildSupplierReport(debts);
@@ -82,12 +86,14 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
       h15,
       h30,
       h45,
-      h60
+      h60,
+      hn
     },
     options: {
       skip_overdue_kronis: !!skipOverdueKronis,
       ignored_suppliers: ignoredSuppliers || [],
-      use_cash_for_debt: !!options.useCashForDebt
+      use_cash_for_debt: !!options.useCashForDebt,
+      n_days: customDays
     },
     cash_breakdown: options.cashBreakdown || null
   };
@@ -266,13 +272,18 @@ export const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
   const h45 = getTargetForHorizon(45);
   const h60 = getTargetForHorizon(60);
 
+  const customDays = parseInt(options.customDays) || 90;
+  const hCustom = getTargetForHorizon(customDays);
+
   return {
     debt_target_today: Math.round(totalDailyTarget * 100) / 100,
     target_15d: h15.daily_target,
     target_30d: h30.daily_target,
     target_45d: h45.daily_target,
     target_60d: h60.daily_target,
-    horizons: [h15, h30, h45, h60]
+    target_custom: hCustom.daily_target,
+    custom_days: customDays,
+    horizons: [h15, h30, h45, h60, hCustom]
   };
 };
 

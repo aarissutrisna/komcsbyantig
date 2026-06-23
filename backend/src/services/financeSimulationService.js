@@ -35,7 +35,8 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
 
   // 3. Extract baseline options
   const parsedResult = typeof run.result_json === 'string' ? JSON.parse(run.result_json) : run.result_json;
-  const { skip_overdue_kronis, ignored_suppliers, use_cash_for_debt } = parsedResult.options || {};
+  const { skip_overdue_kronis, ignored_suppliers, use_cash_for_debt, n_days } = parsedResult.options || {};
+  const customDays = parseInt(n_days) || settings?.n_days_default || 90;
 
   // 4. Reconstruct baseline real debts from the snapshot
   const snapshot = typeof run.source_debt_snapshot === 'string' 
@@ -87,7 +88,7 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
   const combinedDebts = [...debts, ...simulatedDebtsTransformed];
 
   // 8. Run calculations on combined debts
-  const dailyTarget = calculateDailyTarget(combinedDebts, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
+  const dailyTarget = calculateDailyTarget(combinedDebts, { useCashForDebt: !!use_cash_for_debt, customDays }, run.cash_position_used);
   const biweeklyBuckets = calculateBiweeklyBuckets(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
   const weeklyBudget = calculateWeeklyBudget(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
   const monthlyBudget = calculateMonthlyBudget(combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent);
@@ -98,6 +99,7 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
   const h30 = calculateBudgetForHorizon(30, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
   const h45 = calculateBudgetForHorizon(45, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
   const h60 = calculateBudgetForHorizon(60, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
+  const hn = calculateBudgetForHorizon(customDays, combinedDebts, run.avg_daily_revenue, opexPercent, safetyMarginPercent, { useCashForDebt: !!use_cash_for_debt }, run.cash_position_used);
 
   const supplierReport = buildSupplierReport(combinedDebts);
 
@@ -123,12 +125,14 @@ export const previewSimulation = async (baselineRunId, simulatedDebts) => {
       h15,
       h30,
       h45,
-      h60
+      h60,
+      hn
     },
     options: {
       skip_overdue_kronis: !!skip_overdue_kronis,
       ignored_suppliers: ignored_suppliers || [],
-      use_cash_for_debt: !!use_cash_for_debt
+      use_cash_for_debt: !!use_cash_for_debt,
+      n_days: customDays
     }
   };
 };
