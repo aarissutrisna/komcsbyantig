@@ -27,6 +27,9 @@ Master data toko/cabang.
 - `target_max` (DECIMAL 15,2) - Rupiah atas
 - `n8n_endpoint` (VARCHAR 500) - URL endpoint N8N cabang
 - `n8n_secret` (VARCHAR 255) - Secret token untuk webhook N8N
+- `n8n_debt_endpoint` (VARCHAR 500) - URL webhook N8N untuk fetch data hutang supplier
+- `n8n_debt_secret` (VARCHAR 255) - Secret token untuk auth ke webhook hutang
+- `finance_group_key` (VARCHAR 64 GENERATED ALWAYS AS SHA-256 of `n8n_debt_endpoint`)
 
 ### `user_cabang_history`
 Riwayat penugasan CS ke cabang (Transaction Safed).
@@ -117,6 +120,48 @@ Log aktivitas kritikal untuk audit trail.
 - `ip_address` (VARCHAR 45)
 - `details` (JSON)
 
+### `finance_group_settings`
+Pengaturan dan parameter grup finansial (diturunkan otomatis dari cabang dengan webhook yang sama).
+- `finance_group_key` (VARCHAR 64, *Primary Key*)
+- `opex_percent` (DECIMAL 5,2) - Rencana opex (default: 2.00)
+- `safety_margin_percent` (DECIMAL 5,2) - Margin pengaman pendapatan (default: 15.00)
+- `n_days_default` (INT) - Horizon perencanaan (default: 90)
+- `updated_at` (DATETIME)
+
+### `finance_cash_position`
+Posisi saldo kas awal (diinput oleh Admin/Owner).
+- `id` (VARCHAR 36, UUID - *Primary Key*)
+- `finance_group_key` (VARCHAR 64, *Index*)
+- `cash_amount` (DECIMAL 15,2) - Total nominal kas
+- `recorded_date` (DATE)
+- `input_by` (VARCHAR 36, FK ke `users`)
+- `notes` (VARCHAR 255)
+- `created_at` (DATETIME)
+- **`UNIQUE KEY`**: `(finance_group_key, recorded_date)`
+
+### `finance_analysis_runs`
+Histori snapshot kalkulasi hasil analisa keuangan.
+- `id` (VARCHAR 36, UUID - *Primary Key*)
+- `finance_group_key` (VARCHAR 64, *Index*)
+- `triggered_by` (VARCHAR 36, FK ke `users`)
+- `run_label` (VARCHAR 150)
+- `cash_position_used` (DECIMAL 15,2) - Kas total yang digunakan
+- `avg_daily_revenue` (DECIMAL 15,2)
+- `result_json` (JSON) - Seluruh hasil kalkulasi horizon, opsi `use_cash_for_debt` (boolean), dan rincian breakdown akun kas (`cash_breakdown` JSON)
+- `source_debt_snapshot` (JSON) - snapshot payload hutang dari N8N
+- `created_at` (DATETIME)
+
+### `finance_alerts`
+Alert/peringatan defisit kas dari hasil analisa.
+- `id` (VARCHAR 36, UUID - *Primary Key*)
+- `finance_group_key` (VARCHAR 64, *Index*)
+- `analysis_run_id` (VARCHAR 36, FK ke `finance_analysis_runs` ON DELETE CASCADE)
+- `alert_type` (ENUM: 'deficit_bucket', 'runway_critical', 'high_concentration')
+- `message` (TEXT)
+- `severity` (ENUM: 'warning', 'critical')
+- `is_read` (BOOLEAN)
+- `created_at` (DATETIME)
+
 ---
 
 ## 2. Relasi Antar Tabel
@@ -130,12 +175,17 @@ erDiagram
     branches ||--o{ attendance_data : "tracks"
     branches ||--o{ commissions : "earns"
     branches ||--o{ withdrawal_requests : "manages"
+    branches ||--o{ finance_group_settings : "derived settings"
+    branches ||--o{ finance_cash_position : "has cash positions"
+    branches ||--o{ finance_analysis_runs : "records runs"
+    branches ||--o{ finance_alerts : "triggers alerts"
     users ||--o{ attendance_data : "records"
     users ||--o{ commissions : "earns"
     users ||--o{ withdrawal_requests : "requests"
     users ||--o{ user_cabang_history : "history"
     users ||--o{ cabang_user_allocation : "allocation"
     users ||--o{ audit_logs : "audits"
+    finance_analysis_runs ||--o{ finance_alerts : "contains"
 ```
 
 ---

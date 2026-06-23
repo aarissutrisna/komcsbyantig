@@ -79,8 +79,20 @@ Berguna untuk prioritas pembayaran dan tampilan tabel hutang di UI:
 
 > Dari contoh data, ada hutang berumur 811 hari dan beberapa 200-700 hari — ini sinyal hutang macet/disputed yang sebaiknya **dikecualikan dari kalkulasi target harian** (karena tidak realistis dikejar harian) tapi tetap ditampilkan sebagai peringatan terpisah "Hutang Lampau Jatuh Tempo Kronis". Lihat poin open item di bagian 8.
 
-### 2.4 Modal Kas Terkini (Cash Position)
+### 2.4 Modal Kas Terkini (Cash Position) & Rincian Kas (Breakdown)
 Selain proyeksi omzet masa depan, sistem perlu mengetahui **saldo kas riil hari ini** untuk menjadi titik awal simulasi. Berbeda dari data omzet/hutang yang otomatis via webhook, modal kas **diinput manual oleh Admin** (kas fisik/rekening tidak terhubung otomatis ke sistem).
+
+Untuk meningkatkan transparansi alokasi dana, modal kas awal dirincikan ke dalam **9 pos akun kas/bank** (Kas Toko + 8 rekening bank/lainnya) dalam layout form 3x3:
+- Kas Toko (Cash)
+- Bank BCA
+- Bank BRI
+- Bank Mandiri
+- Bank BNI
+- Bank BSI
+- Bank Lainnya 1
+- Bank Lainnya 2
+
+Input rincian kas ini akan otomatis dijumlahkan (sum) sebagai total modal kas terpakai, dan dikirimkan serta disimpan secara persisten ke database dalam format JSON di dalam field `result_json.cash_breakdown`.
 
 Fungsinya mengubah modul dari sekadar "proyeksi" menjadi **cash runway simulator**: menjawab "di tanggal berapa kas diperkirakan minus jika tidak ada penyesuaian belanja?"
 
@@ -112,36 +124,44 @@ opex_harian = avg_daily_revenue × (opex_percent / 100)     // default 2%
 >   AND o.date >= CURDATE() - INTERVAL ? DAY
 > ```
 
-### 3.2 Target Harian Bayar Hutang
-Setiap hutang aktif disebar proporsional dari hari ini sampai jatuh temponya ("debt amortization calendar"), bukan dirata-rata kasar:
+### 3.2 Target Harian Bayar Hutang (Amortisasi & Horizon N-Hari)
+
+Sistem menghitung target harian menggunakan dua metode:
+1. **Target Harian Spike (iPOS style)**: Setiap hutang aktif disebar proporsional dari hari ini sampai jatuh temponya:
+   ```
+   untuk setiap supplier_debts WHERE status != 'paid' AND due_date >= today:
+       sisa_hari    = due_date - today
+       porsi_harian = (amount - paid_amount) / sisa_hari
+       sebar porsi_harian ke setiap tanggal dari today s.d. due_date
+   
+   required_daily_target(tanggal) = SUM(semua porsi_harian yang overlap tanggal tsb)
+   ```
+2. **Target Harian Merata Horizon N-Hari (15, 30, 45, 60 Hari)**: Seluruh kewajiban hutang yang jatuh tempo dalam rentang N hari ke depan (termasuk hutang yang sudah overdue) dikumpulkan dan dibagi merata dengan jumlah hari horizon:
+   ```
+   total_debt(N) = overdue_debt + upcoming_debt_due_in_N_days
+   daily_target(N) = total_debt(N) / N
+   ```
+3. **Net Target Harian (Dengan Kas Awal)**: Jika opsi **"Gunakan Kas Awal (Net Target)"** diaktifkan, total hutang dalam horizon waktu dikurangi terlebih dahulu dengan saldo kas awal terinput sebelum dibagi N-Hari:
+   ```
+   net_debt(N) = Math.max(0, total_debt(N) - kas_awal)
+   daily_target_net(N) = net_debt(N) / N
+   ```
+
+### 3.3 Target Pembayaran per Kelompok 15 Hari & Horizon Perencanaan
+Perhitungan budget pembelian aman dialihkan ke horizon perencanaan treasury (15, 30, 45, dan 60 Hari) dengan rumus:
 
 ```
-untuk setiap supplier_debts WHERE status != 'paid' AND due_date >= today:
-    sisa_hari    = due_date - today
-    porsi_harian = (amount - paid_amount) / sisa_hari
-    sebar porsi_harian ke setiap tanggal dari today s.d. due_date
+proyeksi_kas_masuk(N) = avg_daily_revenue × N × (1 - safety_margin_percent/100)
+opex(N)               = (avg_daily_revenue × N) × opex_percent/100
+hutang_jatuh_tempo(N) = SUM(amount - paid_amount) WHERE due_date <= today + N
 
-required_daily_target(tanggal) = SUM(semua porsi_harian yang overlap tanggal tsb)
-```
+// Jika opsi "Gunakan Kas Awal" aktif, kas awal diperhitungkan sebagai tambahan modal:
+safe_purchase_budget(N) = proyeksi_kas_masuk(N) - opex(N) - hutang_jatuh_tempo(N) + (use_cash_for_debt ? kas_awal : 0)
 
-### 3.3 Target Pembayaran per Kelompok 15 Hari
-```
-period_bucket(date):
-    if day(date) <= 15 → bucket "P1" (tgl 1-15 bulan tsb)
-    else               → bucket "P2" (tgl 16-akhir bulan tsb)
-
-untuk tiap bucket:
-    proyeksi_kas_masuk_bucket = avg_daily_revenue × jumlah_hari_bucket × (1 - safety_margin_percent/100)
-    opex_bucket               = (avg_daily_revenue × jumlah_hari_bucket) × opex_percent/100
-    hutang_jatuh_tempo_bucket = SUM(amount - paid_amount) WHERE due_date BETWEEN bucket_start AND bucket_end
-
-    target_bayar_bucket       = hutang_jatuh_tempo_bucket   // total wajib dibayar periode ini
-    safe_purchase_budget      = proyeksi_kas_masuk_bucket - opex_bucket - hutang_jatuh_tempo_bucket
-
-    status:
-        budget < 0                          → "DEFISIT"
-        budget < 10% proyeksi_kas_masuk      → "WASPADA"
-        lainnya                              → "AMAN"
+status:
+    safe_purchase_budget < 0                          → "DEFISIT"
+    safe_purchase_budget < 10% proyeksi_kas_masuk     → "WASPADA"
+    lainnya                                            → "AMAN"
 ```
 
 ### 3.4 Saldo Kas Berjalan (Cash Runway)
@@ -402,13 +422,17 @@ Di `App.tsx`, tambahkan route:
 
 ### 6.2 Layout Halaman
 1. **Selector Finance Group** — dropdown di atas (jika ada lebih dari 1 grup)
-2. **Input Modal Kas Terkini** — field input nominal, diisi/dikonfirmasi setiap kali sebelum menjalankan analisa
-3. **Tombol "Jalankan Analisa"** — aksi utama halaman ini. Saat ditekan: trigger `POST /api/finance/analysis-runs/:group_id`, tampilkan loading state singkat (beberapa detik, karena fetch live ke N8N), lalu render hasil di bawahnya
-4. **Hasil Analisa Terbaru** (muncul setelah tombol ditekan):
-   - **Card Ringkasan** — Target harian bayar hutang hari ini (angka besar, merah jika defisit) + status runway ("AMAN" / "WASPADA TINGGI" / "Defisit diperkirakan tgl X")
-   - **Tab Switcher**: `Harian | 15-Harian | Mingguan | Bulanan` — default terbuka di tab **15-Harian**
-   - **Chart (Recharts)** — kurva kebutuhan kas vs garis `avg_daily_revenue`, ditambah **garis saldo kas berjalan** (dimulai dari modal kas terkini) sehingga titik potong ke bawah nol langsung terlihat visual
-   - **Tabel Budget per Bucket** — kolom: Periode | Proyeksi Masuk | Opex | Hutang Jatuh Tempo | Budget Belanja Aman | Status (badge hijau/kuning/merah)
+2. **Form Rincian Kas Awal (3x3 Layout)** — Tabel input berisi 8 pos kas untuk Kas Toko + 7 rekening bank/lainnya yang menjumlahkan secara otomatis (real-time).
+3. **Checkbox Opsi Parameter**:
+   - **Gunakan Kas Awal (Net Target)**: mengaktifkan pengurangan target hutang & penambahan budget aman dengan kas awal.
+   - **Skip Overdue Kronis**: mengabaikan tagihan berumur >90 hari.
+   - **Skip Supplier Khusus**: mengecualikan supplier tertentu (misal: PJBT).
+4. **Tombol "Jalankan Analisa"** — trigger preview/analisa.
+5. **Hasil Analisa Terbaru**:
+   - **Card Ringkasan** — Rata-rata Harian, Target Harian (30 Hari), Status Runway, dan total Hutang Kronis.
+   - **Display Rincian Kas Awal** — Panel yang menampilkan breakdown saldo kas awal yang terpakai.
+   - **Tab Switcher Horizon**: `15 Hari | 30 Hari | 45 Hari | 60 Hari | Target Harian | Rincian Supplier` — default terbuka di tab **15 Hari**.
+   - **Visual Distribusi Kas (Stacked Progress Bar)** — Menampilkan persentase alokasi Kas Masuk ke Rencana Opex (Amber), Hutang Terakumulasi (Indigo), dan Budget Aman (Emerald) atau Defisit Kas (Red blinking). Ketika opsi kas awal aktif, menyertakan legenda indikator kas awal (Blue).
 5. **Tab "Histori Analisa"** — daftar seluruh hasil analisa yang pernah dijalankan (lihat 7.1), dengan aksi Lihat & Hapus per entri
 
 ### 6.3 Halaman Pendukung
