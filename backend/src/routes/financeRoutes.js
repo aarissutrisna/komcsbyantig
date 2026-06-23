@@ -1,5 +1,6 @@
 import express from 'express';
 import * as financeController from '../controllers/financeController.js';
+import * as financeSimulationController from '../controllers/financeSimulationController.js';
 import { authMiddleware, roleMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -19,6 +20,13 @@ router.post('/analysis-runs/:groupKey/save', financeController.saveAnalysis);
 router.get('/analysis-runs/:groupKey', financeController.getAnalysisHistory);
 router.get('/analysis-runs/:groupKey/:runId', financeController.getAnalysisDetail);
 router.delete('/analysis-runs/:groupKey/:runId', financeController.deleteAnalysisRun);
+
+// Simulations
+router.post('/simulations/:groupKey/preview', financeSimulationController.previewSimulation);
+router.post('/simulations/:groupKey/save', financeSimulationController.saveSimulation);
+router.get('/simulations/:groupKey', financeSimulationController.getSimulations);
+router.get('/simulations/:groupKey/:simId', financeSimulationController.getSimulationDetail);
+router.delete('/simulations/:groupKey/:simId', financeSimulationController.deleteSimulation);
 
 // Alerts
 router.get('/alerts/:groupKey', financeController.getAlerts);

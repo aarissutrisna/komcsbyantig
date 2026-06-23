@@ -20,6 +20,7 @@ import {
   ArrowLeftRight,
   ClipboardCheck,
   TrendingUp,
+  Calculator,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -64,6 +65,7 @@ export function Layout({ children }: LayoutProps) {
       title: 'Keuangan',
       items: [
         { name: 'Analisa Keuangan', href: '/finance/analysis', icon: TrendingUp, roles: ['admin', 'owner'] },
+        { name: 'Simulasi Pembelian', href: '/finance/simulation', icon: Calculator, roles: ['admin', 'owner'] },
       ]
     },
     {

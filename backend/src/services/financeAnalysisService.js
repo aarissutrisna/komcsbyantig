@@ -138,7 +138,7 @@ export const runAnalysis = async (financeGroupKey, triggeredBy, runLabel = null,
 /**
  * Build detailed supplier report from debts
  */
-const buildSupplierReport = (debts) => {
+export const buildSupplierReport = (debts) => {
   const supplierMap = new Map();
   
   for (const debt of debts) {
@@ -210,7 +210,7 @@ const buildSupplierReport = (debts) => {
 /**
  * Calculate daily debt payment target
  */
-const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
+export const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -279,7 +279,7 @@ const calculateDailyTarget = (debts, options = {}, cashAmount = 0) => {
 /**
  * Calculate biweekly (15-day) budget buckets
  */
-const calculateBiweeklyBuckets = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
+export const calculateBiweeklyBuckets = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
   const today = new Date();
   const buckets = [];
 
@@ -330,7 +330,7 @@ const calculateBiweeklyBuckets = (debts, avgDailyRevenue, opexPercent, safetyMar
 /**
  * Calculate weekly budget
  */
-const calculateWeeklyBudget = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
+export const calculateWeeklyBudget = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
   const today = new Date();
   const weekEnd = new Date(today);
   weekEnd.setDate(today.getDate() + 7);
@@ -360,7 +360,7 @@ const calculateWeeklyBudget = (debts, avgDailyRevenue, opexPercent, safetyMargin
 /**
  * Calculate monthly budget (sum of weekly buckets, not weekly * 4)
  */
-const calculateMonthlyBudget = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
+export const calculateMonthlyBudget = (debts, avgDailyRevenue, opexPercent, safetyMarginPercent) => {
   const today = new Date();
   const monthEnd = new Date(today);
   monthEnd.setDate(today.getDate() + 30);
@@ -390,7 +390,7 @@ const calculateMonthlyBudget = (debts, avgDailyRevenue, opexPercent, safetyMargi
 /**
  * Calculate budget and safety margin for a specific day horizon
  */
-const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options = {}, cashAmount = 0) => {
+export const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPercent, safetyMarginPercent, options = {}, cashAmount = 0) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const horizonEnd = new Date(today);
@@ -428,7 +428,7 @@ const calculateBudgetForHorizon = (nDays, debts, avgDailyRevenue, opexPercent, s
 /**
  * Calculate cash runway projection
  */
-const calculateCashRunway = (currentCash, avgDailyRevenue, dailyTarget, opexPercent) => {
+export const calculateCashRunway = (currentCash, avgDailyRevenue, dailyTarget, opexPercent) => {
   const targetForRunway = dailyTarget.target_30d || dailyTarget.debt_target_today;
   const netDailyFlow = avgDailyRevenue * (1 - opexPercent / 100) - targetForRunway;
   
